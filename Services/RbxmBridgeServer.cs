@@ -17,6 +17,9 @@ namespace NepTunnel.Services
         private static HttpListener? _listener = null;
         private static bool _isRunning = false;
 
+        public static string ActiveUsername { get; set; } = "Carlitos";
+        public static string ActiveUid { get; set; } = "1344077747";
+
         public static bool IsRunning => _isRunning;
 
         public static bool Start()
@@ -94,7 +97,17 @@ namespace NepTunnel.Services
 
             if (req.HttpMethod == "GET")
             {
-                if (rawPath == "/poll")
+                if (rawPath == "/identity" || rawPath == "/user")
+                {
+                    SendJson(res, 200, new
+                    {
+                        status = "ok",
+                        name = ActiveUsername,
+                        displayName = ActiveUsername,
+                        uid = ActiveUid
+                    });
+                }
+                else if (rawPath == "/poll")
                 {
                     string? pending;
                     lock (LockObj)
