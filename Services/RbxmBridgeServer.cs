@@ -99,6 +99,7 @@ namespace NepTunnel.Services
             {
                 if (rawPath == "/identity" || rawPath == "/user")
                 {
+                    Logger.Log($"[Bridge] Roblox Studio queried identity -> Name: '{ActiveUsername}', UID: '{ActiveUid}'");
                     SendJson(res, 200, new
                     {
                         status = "ok",
