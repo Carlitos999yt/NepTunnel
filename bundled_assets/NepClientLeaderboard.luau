@@ -79,6 +79,7 @@ local function buildLeaderboard()
     local function updateList()
         container:ClearAllChildren()
         local yOffset = 0
+        local nameCounts = {}
 
         for _, plr in ipairs(Players:GetPlayers()) do
             local row = Instance.new("Frame")
@@ -88,12 +89,18 @@ local function buildLeaderboard()
             row.Parent = container
 
             local customVal = plr:FindFirstChild("NepCustomName")
-            local displayName = (customVal and customVal.Value ~= "") and customVal.Value or plr.DisplayName
+            local rawName = (customVal and customVal.Value ~= "") and customVal.Value or plr.DisplayName
+            
+            nameCounts[rawName] = (nameCounts[rawName] or 0) + 1
+            local finalDisplay = rawName
+            if nameCounts[rawName] > 1 then
+                finalDisplay = rawName .. " (" .. tostring(nameCounts[rawName]) .. ")"
+            end
 
             local nameLbl = Instance.new("TextLabel")
             nameLbl.Size = UDim2.new(0.65, 0, 1, 0)
             nameLbl.BackgroundTransparency = 1
-            nameLbl.Text = "● " .. displayName
+            nameLbl.Text = "● " .. finalDisplay
             nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
             nameLbl.Font = Enum.Font.SourceSansSemibold
             nameLbl.TextSize = 15
@@ -129,6 +136,7 @@ local function buildLeaderboard()
         frame.Size = UDim2.new(0, 220, 0, math.max(65, 42 + yOffset))
     end
 
+    -- Update automatically when players join or leave
     Players.PlayerAdded:Connect(updateList)
     Players.PlayerRemoving:Connect(updateList)
     updateList()
