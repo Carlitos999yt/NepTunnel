@@ -1956,7 +1956,15 @@ namespace NepTunnel
                     MessageBox.Show("Port must be a number.", "Invalid Port", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                if (string.IsNullOrEmpty(_studioPath))
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
+                {
+                    _studioPath = RobloxStudioService.GetStudioPath();
+                    var cfgToSave = ConfigManager.LoadConfig();
+                    cfgToSave.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfgToSave);
+                }
+
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
                 {
                     string osName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" :
                                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "macOS" : "Linux";
@@ -2253,9 +2261,17 @@ namespace NepTunnel
                     errLbl.Text = "Port must be a number";
                     return;
                 }
-                if (string.IsNullOrEmpty(_studioPath))
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
                 {
-                    MessageBox.Show("Roblox Studio was not found.", "Studio Not Found", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _studioPath = RobloxStudioService.GetStudioPath();
+                    var cfgToSave = ConfigManager.LoadConfig();
+                    cfgToSave.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfgToSave);
+                }
+
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
+                {
+                    MessageBox.Show("Roblox Studio was not found on your system.", "Studio Not Found", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
                 errLbl.Text = "";
