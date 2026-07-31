@@ -31,6 +31,36 @@ local function fetchNepIdentity()
     return nil
 end
 
+-- Helper function to create/update 3D Overhead BillboardGui
+local function attachOverheadTag(character, customName)
+    local head = character:WaitForChild("Head", 10)
+    if not head then return end
+
+    -- Remove existing tag if present
+    local existing = head:FindFirstChild("NepOverheadTag")
+    if existing then existing:Destroy() end
+
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "NepOverheadTag"
+    bb.Adornee = head
+    bb.Size = UDim2.new(0, 200, 0, 50)
+    bb.StudsOffset = Vector3.new(0, 2.5, 0)
+    bb.AlwaysOnTop = true
+
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.new(1, 0, 1, 0)
+    txt.BackgroundTransparency = 1
+    txt.Text = customName
+    txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    txt.TextStrokeTransparency = 0
+    txt.Font = Enum.Font.SourceSansBold
+    txt.TextSize = 22
+    txt.Parent = bb
+
+    bb.Parent = head
+end
+
 -- Helper function to apply custom DisplayName & 3D Overhead Name Tag
 local function applyNepName(player, customName)
     if not customName or customName == "" then return end
@@ -40,7 +70,7 @@ local function applyNepName(player, customName)
         player.DisplayName = customName
     end)
 
-    -- 2. Apply DisplayName & 3D Overhead Tag to Character Humanoid
+    -- 2. Apply DisplayName & 3D Overhead Tag to Character Humanoid & Head
     local function onCharacterAdded(character)
         local humanoid = character:WaitForChild("Humanoid", 10)
         if humanoid then
@@ -48,6 +78,7 @@ local function applyNepName(player, customName)
                 humanoid.DisplayName = customName
             end)
         end
+        attachOverheadTag(character, customName)
     end
 
     if player.Character then
@@ -62,7 +93,9 @@ Players.PlayerAdded:Connect(function(player)
         local customName = fetchNepIdentity()
         if customName then
             applyNepName(player, customName)
-            print("[NepTunnel] Synchronized DisplayName for " .. player.Name .. " -> " .. customName)
+            print("[NepTunnel] Synchronized name for " .. player.Name .. " -> " .. customName)
+        else
+            print("[NepTunnel] No custom name provided, keeping default " .. player.Name)
         end
     end)
 end)
