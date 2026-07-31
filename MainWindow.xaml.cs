@@ -170,7 +170,20 @@ namespace NepTunnel
 
         private void OnStudioFound(string path)
         {
-            _studioPath = path;
+            var cfg = ConfigManager.LoadConfig();
+            if (!string.IsNullOrEmpty(cfg.Studio) && File.Exists(cfg.Studio))
+            {
+                _studioPath = cfg.Studio;
+            }
+            else
+            {
+                _studioPath = path;
+                if (!string.IsNullOrEmpty(_studioPath))
+                {
+                    cfg.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfg);
+                }
+            }
             UpdateStudioStatusText();
             ShowMainMenuView();
         }
@@ -432,6 +445,11 @@ namespace NepTunnel
                         _studioPath = selectedPath;
                         studioLbl.Text = _studioPath;
                         studioLbl.Foreground = (SolidColorBrush)FindResource("GlowBrush");
+
+                        var cfg = ConfigManager.LoadConfig();
+                        cfg.Studio = _studioPath;
+                        ConfigManager.SaveConfig(cfg);
+
                         SetStatus($"Ruta Studio seleccionada: {inst.Name}", (SolidColorBrush)FindResource("OkBrush"));
                         RootMainGrid.Children.Remove(overlayGrid);
                     };
@@ -785,6 +803,11 @@ namespace NepTunnel
                     _studioPath = dialog.FileName;
                     studioLbl.Text = _studioPath;
                     studioLbl.Foreground = (SolidColorBrush)FindResource("GlowBrush");
+
+                    var cfg = ConfigManager.LoadConfig();
+                    cfg.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfg);
+
                     SetStatus($"Studio set  ·  {_studioPath}", (SolidColorBrush)FindResource("OkBrush"));
                 }
             };
