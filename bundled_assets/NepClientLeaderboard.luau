@@ -5,13 +5,18 @@
 
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
-local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 
 local localPlayer = Players.LocalPlayer
 
--- Desactivar la lista nativa de Roblox desde el cliente
-pcall(function()
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+-- Desactivar la lista nativa de Roblox desde el cliente continuamente
+task.spawn(function()
+    while true do
+        pcall(function()
+            StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+        end)
+        task.wait(0.5)
+    end
 end)
 
 local function buildLeaderboard()
@@ -141,15 +146,27 @@ local function buildLeaderboard()
     Players.PlayerRemoving:Connect(updateList)
     updateList()
 
-    -- TAB Key Toggle Listener
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.KeyCode == Enum.KeyCode.Tab then
+    -- Bloquear la tecla TAB para que Roblox NUNCA abra su tabulador nativo
+    local function handleTabAction(actionName, inputState, inputObject)
+        if inputState == Enum.UserInputState.Begin then
             frame.Visible = not frame.Visible
         end
+        return Enum.ContextActionResult.Sink
+    end
+
+    pcall(function()
+        ContextActionService:UnbindAction("NepToggleCustomTab")
     end)
+    ContextActionService:BindActionAtPriority(
+        "NepToggleCustomTab",
+        handleTabAction,
+        false,
+        Enum.ContextActionPriority.High.Value + 2000,
+        Enum.KeyCode.Tab
+    )
 
     screenGui.Parent = playerGui
 end
 
 task.spawn(buildLeaderboard)
-print("[NepTunnel] Client Leaderboard UI initialized!")
+print("[NepTunnel] Client Leaderboard UI (TAB Sink Protection) initialized!")
