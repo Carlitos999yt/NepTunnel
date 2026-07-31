@@ -813,6 +813,7 @@ namespace NepTunnel
 
             var details = new[]
             {
+                (LocalizationService.Get("lbl_username"), !string.IsNullOrWhiteSpace(cfg.Username) ? cfg.Username : "(Por defecto / Default)"),
                 (LocalizationService.Get("lbl_tunnel_addr"), cfg.Addr),
                 (LocalizationService.Get("lbl_server_port"), cfg.Port),
                 (LocalizationService.Get("lbl_uid"), cfg.Uid),
@@ -1792,6 +1793,7 @@ namespace NepTunnel
             cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
             cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1802,21 +1804,27 @@ namespace NepTunnel
             var uidTb = new TextBox { Text = cfg.Uid, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
             Grid.SetRow(uidTb, 0); Grid.SetColumn(uidTb, 1); cardGrid.Children.Add(uidTb);
 
+            // My Username / Nickname (Optional)
+            var userLbl = new TextBlock { Text = LocalizationService.Get("lbl_username"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetRow(userLbl, 1); Grid.SetColumn(userLbl, 0); cardGrid.Children.Add(userLbl);
+            var userTb = new TextBox { Text = cfg.Username, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
+            Grid.SetRow(userTb, 1); Grid.SetColumn(userTb, 1); cardGrid.Children.Add(userTb);
+
             // Server Local Port
             var portLbl = new TextBlock { Text = LocalizationService.Get("lbl_server_port"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetRow(portLbl, 1); Grid.SetColumn(portLbl, 0); cardGrid.Children.Add(portLbl);
+            Grid.SetRow(portLbl, 2); Grid.SetColumn(portLbl, 0); cardGrid.Children.Add(portLbl);
             var portTb = new TextBox { Text = cfg.Port, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
-            Grid.SetRow(portTb, 1); Grid.SetColumn(portTb, 1); cardGrid.Children.Add(portTb);
+            Grid.SetRow(portTb, 2); Grid.SetColumn(portTb, 1); cardGrid.Children.Add(portTb);
 
             // Tunnel Address
             var addrLbl = new TextBlock { Text = LocalizationService.Get("lbl_tunnel_addr"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetRow(addrLbl, 2); Grid.SetColumn(addrLbl, 0); cardGrid.Children.Add(addrLbl);
+            Grid.SetRow(addrLbl, 3); Grid.SetColumn(addrLbl, 0); cardGrid.Children.Add(addrLbl);
             var addrTb = new TextBox { Text = cfg.Addr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
-            Grid.SetRow(addrTb, 2); Grid.SetColumn(addrTb, 1); cardGrid.Children.Add(addrTb);
+            Grid.SetRow(addrTb, 3); Grid.SetColumn(addrTb, 1); cardGrid.Children.Add(addrTb);
 
             // Map File (Optional)
             var mapLbl = new TextBlock { Text = LocalizationService.Get("lbl_map_file"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetRow(mapLbl, 3); Grid.SetColumn(mapLbl, 0); cardGrid.Children.Add(mapLbl);
+            Grid.SetRow(mapLbl, 4); Grid.SetColumn(mapLbl, 0); cardGrid.Children.Add(mapLbl);
 
             var mapStack = new Grid();
             mapStack.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1844,7 +1852,7 @@ namespace NepTunnel
                 }
             };
             Grid.SetColumn(mapBrowseBtn, 1); mapStack.Children.Add(mapBrowseBtn);
-            Grid.SetRow(mapStack, 3); Grid.SetColumn(mapStack, 1); cardGrid.Children.Add(mapStack);
+            Grid.SetRow(mapStack, 4); Grid.SetColumn(mapStack, 1); cardGrid.Children.Add(mapStack);
 
             card.Child = cardGrid;
             stack.Children.Add(card);
@@ -1891,6 +1899,7 @@ namespace NepTunnel
                 string port = portTb.Text.Trim();
                 string addr = addrTb.Text.Trim();
                 string mapPath = mapTb.Text.Trim();
+                string username = userTb.Text.Trim();
 
                 if (string.IsNullOrEmpty(uid) || string.IsNullOrEmpty(port) || string.IsNullOrEmpty(addr))
                 {
@@ -1911,11 +1920,15 @@ namespace NepTunnel
                 }
 
                 cfg.Uid = uid;
+                cfg.Username = username;
                 cfg.Port = port;
                 cfg.Addr = addr;
                 cfg.Map = mapPath;
                 cfg.Studio = _studioPath;
                 ConfigManager.SaveConfig(cfg);
+
+                RbxmBridgeServer.ActiveUsername = username;
+                RbxmBridgeServer.ActiveUid = uid;
 
                 ShowHostRunningView(uid, port, addr, mapPath);
             };
@@ -2109,6 +2122,19 @@ namespace NepTunnel
             var cfg = ConfigManager.LoadConfig();
 
             var cardStack = new StackPanel();
+
+            // My Username / Nick Field (Optional)
+            cardStack.Children.Add(new TextBlock
+            {
+                Text = LocalizationService.Get("lbl_username"),
+                FontSize = 14,
+                Foreground = (SolidColorBrush)FindResource("MuteBrush"),
+                Margin = new Thickness(0, 0, 0, 4)
+            });
+
+            var userTb = new TextBox { Text = cfg.Username, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 0, 0, 8) };
+            cardStack.Children.Add(userTb);
+
             cardStack.Children.Add(new TextBlock
             {
                 Text = LocalizationService.Get("lbl_tunnel_input"),
@@ -2166,6 +2192,7 @@ namespace NepTunnel
             };
             connectBtn.Click += (s, e) =>
             {
+                string username = userTb.Text.Trim();
                 string addr = addrTb.Text.Trim();
                 if (string.IsNullOrEmpty(addr) || !addr.Contains(':'))
                 {
@@ -2185,8 +2212,11 @@ namespace NepTunnel
                 }
                 errLbl.Text = "";
 
+                cfg.Username = username;
                 cfg.Addr = addr;
                 ConfigManager.SaveConfig(cfg);
+
+                RbxmBridgeServer.ActiveUsername = username;
 
                 ShowJoinRunningView(parts[0], rp);
             };

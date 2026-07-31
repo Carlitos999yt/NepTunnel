@@ -12,6 +12,9 @@ namespace NepTunnel.Services
         [JsonPropertyName("uid")]
         public string Uid { get; set; } = "1344077747";
 
+        [JsonPropertyName("username")]
+        public string Username { get; set; } = "";
+
         [JsonPropertyName("port")]
         public string Port { get; set; } = "55555";
 
@@ -35,22 +38,22 @@ namespace NepTunnel.Services
     public static class ConfigManager
     {
         public static string ScriptDir { get; } = AppDomain.CurrentDomain.BaseDirectory;
-        public static string AppDataDir { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NepTunnel");
-        public static string LogFile { get; } = Path.Combine(ScriptDir, "SESSION_INFO.txt");
-        public static string AssetsDir { get; } = Path.Combine(ScriptDir, "bundled_assets");
+        public static string AppDataDir { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NepTunnel");
+        public static string LogFile { get; } = Path.Combine(AppDataDir, "SESSION_INFO.txt");
+        public static string AssetsDir { get; } = Path.Combine(AppDataDir, "bundled_assets");
 
         // Returns all potential locations to read or write nep_config.json.
         private static List<string> GetConfigSearchPaths()
         {
             var paths = new List<string>();
 
-            // 1. Current working directory
-            string cwdConfig = Path.Combine(Directory.GetCurrentDirectory(), "nep_config.json");
-            paths.Add(cwdConfig);
-
-            // 2. User AppData directory (%APPDATA%\NepTunnel\nep_config.json)
+            // 1. User LocalAppData directory (%LOCALAPPDATA%\NepTunnel\nep_config.json)
             string appDataConfig = Path.Combine(AppDataDir, "nep_config.json");
-            if (!paths.Contains(appDataConfig)) paths.Add(appDataConfig);
+            paths.Add(appDataConfig);
+
+            // 2. Current working directory
+            string cwdConfig = Path.Combine(Directory.GetCurrentDirectory(), "nep_config.json");
+            if (!paths.Contains(cwdConfig)) paths.Add(cwdConfig);
 
             // 3. Application BaseDirectory
             string baseConfig = Path.Combine(ScriptDir, "nep_config.json");
