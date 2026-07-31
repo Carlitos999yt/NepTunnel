@@ -71,7 +71,7 @@ namespace NepTunnel.Services
                 res.StatusCode = statusCode;
                 res.ContentType = "application/json";
                 res.ContentLength64 = bytes.Length;
-                res.AddHeader("Access-Control-Allow-Origin", "http://127.0.0.1:7878");
+                res.AddHeader("Access-Control-Allow-Origin", "*");
                 res.OutputStream.Write(bytes, 0, bytes.Length);
                 res.Close();
             }
@@ -86,7 +86,7 @@ namespace NepTunnel.Services
             if (req.HttpMethod == "OPTIONS")
             {
                 res.StatusCode = 204;
-                res.AddHeader("Access-Control-Allow-Origin", "http://127.0.0.1:7878");
+                res.AddHeader("Access-Control-Allow-Origin", "*");
                 res.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
                 res.AddHeader("Access-Control-Allow-Headers", "Content-Type");
                 res.Close();
@@ -162,7 +162,7 @@ namespace NepTunnel.Services
                         res.ContentType = "application/octet-stream";
                         res.ContentLength64 = data.Length;
                         res.AddHeader("Content-Disposition", $"attachment; filename=\"{safeFileName}\"");
-                        res.AddHeader("Access-Control-Allow-Origin", "http://127.0.0.1:7878");
+                        res.AddHeader("Access-Control-Allow-Origin", "*");
                         res.OutputStream.Write(data, 0, data.Length);
                         res.Close();
                     }
