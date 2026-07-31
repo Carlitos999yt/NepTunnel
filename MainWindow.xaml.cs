@@ -2380,40 +2380,12 @@ namespace NepTunnel
                 Dispatcher.Invoke(() =>
                 {
                     LogAppend(logBox.RichText, $"Target     : {dstHost}:{dstPort}", "info");
-                    LogAppend(logBox.RichText, $"Local proxy: 127.0.0.1:{UdpProxy.PROXY_PORT}");
-                    LogAppend(logBox.RichText, "Starting UDP proxy…");
+                    LogAppend(logBox.RichText, "Connecting directly to remote host…");
                 });
 
-                bool ok = UdpProxy.StartProxy(dstHost, dstPort);
-                if (!ok)
-                {
-                    Dispatcher.Invoke(() =>
-                    {
-                        LogAppend(logBox.RichText, $"Failed to bind port {UdpProxy.PROXY_PORT}. Is another session running?", "err");
-                        SetStatus($"Proxy failed — port {UdpProxy.PROXY_PORT} busy?", (SolidColorBrush)FindResource("ErrBrush"));
-                    });
-                    return;
-                }
-
-                Dispatcher.Invoke(() =>
-                {
-                    LogAppend(logBox.RichText, $"Proxy active on 127.0.0.1:{UdpProxy.PROXY_PORT}", "ok");
-                    LogAppend(logBox.RichText, $"Warming tunnel ({UdpProxy.WARM_PACKETS} probes)…", "warn");
-                });
-
+                // Enviar unos paquetes de calentamiento para perforar el NAT (opcional pero ayuda)
                 int warmed = UdpProxy.WarmTunnel(dstHost, dstPort);
-                Dispatcher.Invoke(() =>
-                {
-                    if (warmed > 0)
-                    {
-                        LogAppend(logBox.RichText, $"✓ Tunnel warmed ({warmed}/{UdpProxy.WARM_PACKETS} sent)", "ok");
-                    }
-                    else
-                    {
-                        LogAppend(logBox.RichText, "Warm-up skipped (proxy stopped early)", "dim");
-                    }
-                });
-
+                
                 await Task.Delay(250);
 
                 Dispatcher.Invoke(() =>
@@ -2426,7 +2398,8 @@ namespace NepTunnel
                 try
                 {
                     var cfg = ConfigManager.LoadConfig();
-                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", UdpProxy.PROXY_PORT.ToString(), pg, tg, cfg.Uid, "StudioPlayer_Proxy");
+                    // Connect DIRECTLY to dstHost and dstPort (like Python did)
+                    RobloxStudioService.LaunchClient(_studioPath, dstHost, dstPort.ToString(), pg, tg, cfg.Uid, "StudioPlayer_Proxy");
                     Dispatcher.Invoke(() =>
                     {
                         LogAppend(logBox.RichText, "● CONNECTED — Studio launched", "ok");
@@ -2438,7 +2411,6 @@ namespace NepTunnel
                     Dispatcher.Invoke(() =>
                     {
                         LogAppend(logBox.RichText, $"Studio launch error: {ex.Message}", "err");
-                        UdpProxy.StopProxy();
                         SetStatus("Studio launch failed", (SolidColorBrush)FindResource("ErrBrush"));
                     });
                 }

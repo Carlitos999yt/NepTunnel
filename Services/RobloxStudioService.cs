@@ -294,7 +294,6 @@ namespace NepTunnel.Services
                 "-placeVersion", "0",
                 "-server", server,
                 "-port", port,
-                "-userid", string.IsNullOrWhiteSpace(uid) ? "1000" : uid,
                 "-parentSessionGuid", pg,
                 "-playTestSessionGuid", tg,
                 "-instanceId", inst
