@@ -131,7 +131,10 @@ namespace NepTunnel.Services
                 }
             }
             catch { }
-            return list;
+            return list.OrderByDescending(i =>
+            {
+                try { return File.GetLastWriteTime(i.Path); } catch { return DateTime.MinValue; }
+            }).ToList();
         }
 
         private static readonly List<Process> _spawnedProcesses = new();
