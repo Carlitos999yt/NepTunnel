@@ -61,7 +61,12 @@ namespace NepTunnel.Services
                 string robloxLogDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "logs");
                 if (!Directory.Exists(robloxLogDir)) return null;
 
-                var files = new DirectoryInfo(robloxLogDir).GetFiles("*.log");
+                var files = new DirectoryInfo(robloxLogDir).GetFiles("*Studio*.log");
+                if (files.Length == 0)
+                {
+                    files = new DirectoryInfo(robloxLogDir).GetFiles("*.log");
+                }
+
                 FileInfo? latestRobloxLog = null;
                 DateTime maxTime = DateTime.MinValue;
 
