@@ -1423,7 +1423,15 @@ namespace NepTunnel
                             installBtn.IsEnabled = true;
                             if (success)
                             {
-                                SetStatus("RSM Mod Manager iniciado para v0.729.0.7290838", (SolidColorBrush)FindResource("OkBrush"));
+                                string rsmExe = RsmInstallerService.GetRsmStudioExePath();
+                                if (File.Exists(rsmExe))
+                                {
+                                    _studioPath = rsmExe;
+                                    var cfg = ConfigManager.LoadConfig();
+                                    cfg.Studio = _studioPath;
+                                    ConfigManager.SaveConfig(cfg);
+                                }
+                                SetStatus("RSM instalado y seleccionado como activo", (SolidColorBrush)FindResource("OkBrush"));
                             }
                             else
                             {
@@ -1472,8 +1480,21 @@ namespace NepTunnel
                         Dispatcher.Invoke(() =>
                         {
                             repairBtn.IsEnabled = true;
-                            _studioPath = RobloxStudioService.GetStudioPath();
-                            SetStatus("Reparación desde GitHub completada.", (SolidColorBrush)FindResource("OkBrush"));
+                            string rsmExe = RsmInstallerService.GetRsmStudioExePath();
+                            if (File.Exists(rsmExe))
+                            {
+                                _studioPath = rsmExe;
+                            }
+                            else
+                            {
+                                _studioPath = RobloxStudioService.GetStudioPath();
+                            }
+
+                            var cfg = ConfigManager.LoadConfig();
+                            cfg.Studio = _studioPath;
+                            ConfigManager.SaveConfig(cfg);
+
+                            SetStatus("Reparación RSM completada y seleccionada como activa.", (SolidColorBrush)FindResource("OkBrush"));
                             ShowRsmAssistantView();
                         });
                     }
