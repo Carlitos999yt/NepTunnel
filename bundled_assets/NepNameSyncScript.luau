@@ -49,7 +49,7 @@ local function applyHumanoidName(player, customName)
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
--- TÉCNICA #3: Create Custom Leaderboard UI with Name & Minutes Column
+-- TÉCNICA #3: Create Custom Leaderboard UI with Name, Minutes Column & TAB Toggle
 local function createCustomLeaderboard(player, customName)
     local playerGui = player:WaitForChild("PlayerGui", 10)
     if not playerGui then return end
@@ -67,6 +67,7 @@ local function createCustomLeaderboard(player, customName)
     screenGui.ResetOnSpawn = false
 
     local frame = Instance.new("Frame")
+    frame.Name = "LeaderboardFrame"
     frame.Size = UDim2.new(0, 220, 0, 110)
     frame.Position = UDim2.new(1, -230, 0, 10)
     frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -138,6 +139,21 @@ local function createCustomLeaderboard(player, customName)
     valLabel.TextXAlignment = Enum.TextXAlignment.Right
     valLabel.Parent = playerRow
 
+    -- TAB Toggle Script (LocalScript embedded inside ScreenGui)
+    local localToggleScript = Instance.new("LocalScript")
+    localToggleScript.Name = "TabToggleScript"
+    localToggleScript.Source = [[
+        local UserInputService = game:GetService("UserInputService")
+        local frame = script.Parent:WaitForChild("LeaderboardFrame")
+
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if input.KeyCode == Enum.KeyCode.Tab then
+                frame.Visible = not frame.Visible
+            end
+        end)
+    ]]
+    localToggleScript.Parent = screenGui
+
     -- Connect to player's leaderstats (Minutes counter)
     local function connectLeaderstats()
         local ls = player:FindFirstChild("leaderstats") or player:WaitForChild("leaderstats", 8)
@@ -182,4 +198,4 @@ for _, player in ipairs(Players:GetPlayers()) do
     handlePlayer(player)
 end
 
-print("[NepTunnel] NepNameSyncScript (Custom Leaderboard + Minutes) loaded successfully!")
+print("[NepTunnel] NepNameSyncScript (Custom Leaderboard + Minutes + TAB Toggle) loaded successfully!")
