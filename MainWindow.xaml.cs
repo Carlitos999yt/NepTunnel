@@ -1988,7 +1988,7 @@ namespace NepTunnel
             {
                 try
                 {
-                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", port, pg, tg, "StudioPlayer_Host");
+                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", port, pg, tg, uid, "StudioPlayer_Host");
                     LogAppend(logBox.RichText, "Local client launched.", "info");
                 }
                 catch (Exception ex)
@@ -2365,7 +2365,8 @@ namespace NepTunnel
 
                 try
                 {
-                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", UdpProxy.PROXY_PORT.ToString(), pg, tg, "StudioPlayer_Proxy");
+                    var cfg = ConfigManager.LoadConfig();
+                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", UdpProxy.PROXY_PORT.ToString(), pg, tg, cfg.Uid, "StudioPlayer_Proxy");
                     Dispatcher.Invoke(() =>
                     {
                         LogAppend(logBox.RichText, "● CONNECTED — Studio launched", "ok");

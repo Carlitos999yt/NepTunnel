@@ -303,16 +303,17 @@ namespace NepTunnel.Services
             }
         }
 
-        public static void LaunchClient(string studio, string server, string port, string pg, string tg, string inst = "StudioPlayer_0")
+        public static void LaunchClient(string studio, string server, string port, string pg, string tg, string uid = "1000", string inst = "StudioPlayer_0")
         {
             var args = new List<string>
             {
                 "-task", "StartClient",
                 "-placeId", "0",
                 "-universeId", "0",
-                "-placeVersion", "1",
+                "-placeVersion", "0",
                 "-server", server,
                 "-port", port,
+                "-userid", string.IsNullOrWhiteSpace(uid) ? "1000" : uid,
                 "-parentSessionGuid", pg,
                 "-playTestSessionGuid", tg,
                 "-instanceId", inst
