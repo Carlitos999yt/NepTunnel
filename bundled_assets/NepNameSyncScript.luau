@@ -6,6 +6,11 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
+-- Enable HTTP Requests automatically in Roblox Studio local mode
+pcall(function()
+    HttpService.HttpEnabled = true
+end)
+
 local BRIDGE_URL = "http://127.0.0.1:7878/identity"
 
 -- Helper function to fetch configured identity from NepTunnel Local Bridge
