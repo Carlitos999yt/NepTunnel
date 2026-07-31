@@ -2038,6 +2038,9 @@ namespace NepTunnel
 
             Task.Run(async () =>
             {
+                Logger.Log($"Host Session Started: UID={uid}, Port={port}, Addr={addr}, Map={mapPath}");
+                Logger.FetchLatestRobloxStudioLog();
+
                 Dispatcher.Invoke(() =>
                 {
                     LogAppend(logBox.RichText, $"Parent GUID: {pg}", "dim");

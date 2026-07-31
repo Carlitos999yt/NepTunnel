@@ -10,6 +10,8 @@ namespace NepTunnel
         {
             base.OnStartup(e);
 
+            Logger.Log("NepTunnel Application Started.");
+
             // Register emergency process exit handler for Task Manager / ALT+F4 force close
             AppDomain.CurrentDomain.ProcessExit += (s, ev) =>
             {
@@ -27,9 +29,12 @@ namespace NepTunnel
         {
             try
             {
+                Logger.Log("Emergency cleanup executing - saving session logs...");
+                Logger.FetchLatestRobloxStudioLog();
                 UdpProxy.StopProxy(wait: false);
                 RobloxStudioService.StopAllStudioProcesses();
                 RbxmBridgeServer.Stop();
+                Logger.Log("NepTunnel Session Ended cleanly.");
             }
             catch { }
         }
