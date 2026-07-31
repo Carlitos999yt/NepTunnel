@@ -1,5 +1,5 @@
 -- =========================================================================
---  NepTunnel - Dynamic Player Name Synchronization Script (Roblox Studio)
+--  NepTunnel - Dynamic Player Name Synchronization & Leaderboard Overrider
 --  Place this script in ServerScriptService inside your Roblox Place (.rbxl)
 -- =========================================================================
 
@@ -31,46 +31,8 @@ local function fetchNepIdentity()
     return nil
 end
 
--- Helper function to create/update 3D Overhead BillboardGui
-local function attachOverheadTag(character, customName)
-    local head = character:WaitForChild("Head", 10)
-    if not head then return end
-
-    -- Remove existing tag if present
-    local existing = head:FindFirstChild("NepOverheadTag")
-    if existing then existing:Destroy() end
-
-    local bb = Instance.new("BillboardGui")
-    bb.Name = "NepOverheadTag"
-    bb.Adornee = head
-    bb.Size = UDim2.new(0, 200, 0, 50)
-    bb.StudsOffset = Vector3.new(0, 2.5, 0)
-    bb.AlwaysOnTop = true
-
-    local txt = Instance.new("TextLabel")
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    txt.Text = customName
-    txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-    txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    txt.TextStrokeTransparency = 0
-    txt.Font = Enum.Font.SourceSansBold
-    txt.TextSize = 22
-    txt.Parent = bb
-
-    bb.Parent = head
-end
-
--- Helper function to apply custom DisplayName & 3D Overhead Name Tag
-local function applyNepName(player, customName)
-    if not customName or customName == "" then return end
-
-    -- 1. Apply DisplayName to Player Instance (Leaderboard / Player List)
-    pcall(function()
-        player.DisplayName = customName
-    end)
-
-    -- 2. Apply DisplayName & 3D Overhead Tag to Character Humanoid & Head
+-- TÉCNICA #1: Apply DisplayName to Character Humanoid
+local function applyHumanoidName(player, customName)
     local function onCharacterAdded(character)
         local humanoid = character:WaitForChild("Humanoid", 10)
         if humanoid then
@@ -78,7 +40,6 @@ local function applyNepName(player, customName)
                 humanoid.DisplayName = customName
             end)
         end
-        attachOverheadTag(character, customName)
     end
 
     if player.Character then
@@ -87,27 +48,70 @@ local function applyNepName(player, customName)
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
--- Synchronize Name when a Player joins the session
-Players.PlayerAdded:Connect(function(player)
-    task.spawn(function()
-        local customName = fetchNepIdentity()
-        if customName then
-            applyNepName(player, customName)
-            print("[NepTunnel] Synchronized name for " .. player.Name .. " -> " .. customName)
-        else
-            print("[NepTunnel] No custom name provided, keeping default " .. player.Name)
-        end
-    end)
-end)
+-- TÉCNICA #3: Create Custom Player List Leaderboard UI in PlayerGui
+local function createCustomLeaderboard(player, customName)
+    local playerGui = player:WaitForChild("PlayerGui", 10)
+    if not playerGui then return end
 
--- Process any existing players in the session
-for _, player in ipairs(Players:GetPlayers()) do
+    -- Disable Roblox Default PlayerList
+    pcall(function()
+        game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+    end)
+
+    local existing = playerGui:FindFirstChild("NepCustomLeaderboard")
+    if existing then existing:Destroy() end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "NepCustomLeaderboard"
+    screenGui.ResetOnSpawn = false
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 180, 0, 100)
+    frame.Position = UDim2.new(1, -190, 0, 10)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    frame.BackgroundTransparency = 0.2
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    local header = Instance.new("TextLabel")
+    header.Size = UDim2.new(1, 0, 0, 30)
+    header.BackgroundTransparency = 1
+    header.Text = "Personas"
+    header.TextColor3 = Color3.fromRGB(200, 200, 200)
+    header.Font = Enum.Font.SourceSansBold
+    header.TextSize = 14
+    header.Parent = frame
+
+    local playerRow = Instance.new("TextLabel")
+    playerRow.Size = UDim2.new(1, -20, 0, 25)
+    playerRow.Position = UDim2.new(0, 10, 0, 35)
+    playerRow.BackgroundTransparency = 1
+    playerRow.Text = "● " .. customName
+    playerRow.TextColor3 = Color3.fromRGB(255, 255, 255)
+    playerRow.Font = Enum.Font.SourceSansSemibold
+    playerRow.TextSize = 16
+    playerRow.TextXAlignment = Enum.TextXAlignment.Left
+    playerRow.Parent = frame
+
+    screenGui.Parent = playerGui
+end
+
+-- Process All Players
+local function handlePlayer(player)
     task.spawn(function()
-        local customName = fetchNepIdentity()
-        if customName then
-            applyNepName(player, customName)
-        end
+        local customName = fetchNepIdentity() or player.Name
+        applyHumanoidName(player, customName)
+        createCustomLeaderboard(player, customName)
     end)
 end
 
-print("[NepTunnel] NepNameSyncScript initialized successfully!")
+Players.PlayerAdded:Connect(handlePlayer)
+for _, player in ipairs(Players:GetPlayers()) do
+    handlePlayer(player)
+end
+
+print("[NepTunnel] NepNameSyncScript (Técnica 1 + 3) loaded successfully!")
