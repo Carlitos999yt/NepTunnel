@@ -239,7 +239,7 @@ namespace NepTunnel.Services
                 "-task", "StartServer",
                 "-placeId", "0",
                 "-universeId", "0",
-                "-placeVersion", "0",
+                "-placeVersion", "1",
                 "-port", port,
                 "-creatorId", uid,
                 "-creatorType", "1",
