@@ -2311,6 +2311,9 @@ namespace NepTunnel
 
             Task.Run(async () =>
             {
+                Logger.Log($"Join Session Started: Target={dstHost}:{dstPort}");
+                Logger.FetchLatestRobloxStudioLog();
+
                 string pg = Guid.NewGuid().ToString().ToUpper();
                 string tg = Guid.NewGuid().ToString().ToUpper();
 

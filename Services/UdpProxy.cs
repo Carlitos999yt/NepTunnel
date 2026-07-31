@@ -98,6 +98,7 @@ namespace NepTunnel.Services
                 }
                 catch (Exception ex)
                 {
+                    Logger.LogError($"[UdpProxy] Proxy start failed for {dstHost}:{dstPort}", ex);
                     Console.WriteLine($"[proxy start error] {ex.Message}");
                     CleanupSockets();
                     _isRunning = false;
