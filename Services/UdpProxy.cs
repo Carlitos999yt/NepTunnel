@@ -84,12 +84,12 @@ namespace NepTunnel.Services
                     }
 
                     if (addresses.Length == 0) return false;
-                    IPAddress targetIp = addresses[0];
+                    IPAddress targetIp = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? addresses[0];
 
-                    _localListener = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                    _localListener = new Socket(targetIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
                     _localListener.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                     DisableConnReset(_localListener);
-                    _localListener.Bind(new IPEndPoint(IPAddress.Loopback, PROXY_PORT));
+                    _localListener.Bind(new IPEndPoint(targetIp.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Loopback : IPAddress.Loopback, PROXY_PORT));
 
                     _isRunning = true;
 
@@ -132,7 +132,7 @@ namespace NepTunnel.Services
                     {
                         var session = _sessions.GetOrAdd(clientEp, ep =>
                         {
-                            var rSock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                            var rSock = new Socket(dstIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
                             rSock.ReceiveTimeout = 2000;
                             rSock.SendTimeout = 2000;
                             DisableConnReset(rSock);
