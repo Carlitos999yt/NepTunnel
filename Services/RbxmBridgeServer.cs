@@ -99,13 +99,16 @@ namespace NepTunnel.Services
             {
                 if (rawPath == "/identity" || rawPath == "/user")
                 {
-                    Logger.Log($"[Bridge] Roblox Studio queried identity -> Name: '{ActiveUsername}', UID: '{ActiveUid}'");
+                    string safeName = string.IsNullOrWhiteSpace(ActiveUsername) ? "Player" : ActiveUsername;
+                    string safeUid = string.IsNullOrWhiteSpace(ActiveUid) ? "1000" : ActiveUid;
+
+                    Logger.Log($"[Bridge] Roblox Studio queried identity -> Name: '{safeName}', UID: '{safeUid}'");
                     SendJson(res, 200, new
                     {
                         status = "ok",
-                        name = ActiveUsername,
-                        displayName = ActiveUsername,
-                        uid = ActiveUid
+                        name = safeName,
+                        displayName = safeName,
+                        uid = safeUid
                     });
                 }
                 else if (rawPath == "/poll")
