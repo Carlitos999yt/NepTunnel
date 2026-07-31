@@ -45,6 +45,7 @@ namespace NepTunnel.Services
                 ["lbl_platform"] = "Platform:",
                 ["lbl_bridge"] = "Studio Bridge:",
                 ["browse"] = "Browse",
+                ["btn_copy_script"] = "Copy Script",
                 ["back"] = "Back",
                 ["test"] = "Test",
 
@@ -168,8 +169,9 @@ namespace NepTunnel.Services
                 ["lbl_proxy_port"] = "Puerto Proxy:",
                 ["lbl_platform"] = "Plataforma:",
                 ["lbl_bridge"] = "Bridge Studio:",
-                ["browse"] = "Buscar",
-                ["back"] = "Volver",
+                ["browse"] = "Examinar",
+                ["btn_copy_script"] = "Copiar Script",
+                ["back"] = "Atrás",
                 ["test"] = "Probar",
 
                 // Host Config View
@@ -292,7 +294,8 @@ namespace NepTunnel.Services
                 ["lbl_proxy_port"] = "Porta Proxy:",
                 ["lbl_platform"] = "Plataforma:",
                 ["lbl_bridge"] = "Bridge do Studio:",
-                ["browse"] = "Procurar",
+                ["browse"] = "Navegar",
+                ["btn_copy_script"] = "Copiar Script",
                 ["back"] = "Voltar",
                 ["test"] = "Testar",
 
