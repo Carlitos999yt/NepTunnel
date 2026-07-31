@@ -46,6 +46,7 @@ namespace NepTunnel.Services
                 ["lbl_bridge"] = "Studio Bridge:",
                 ["browse"] = "Browse",
                 ["btn_copy_script"] = "Copy Script",
+                ["btn_inject_script"] = "Inject Script",
                 ["back"] = "Back",
                 ["test"] = "Test",
 
@@ -171,6 +172,7 @@ namespace NepTunnel.Services
                 ["lbl_bridge"] = "Bridge Studio:",
                 ["browse"] = "Examinar",
                 ["btn_copy_script"] = "Copiar Script",
+                ["btn_inject_script"] = "Inyectar Script",
                 ["back"] = "Atrás",
                 ["test"] = "Probar",
 
@@ -296,6 +298,7 @@ namespace NepTunnel.Services
                 ["lbl_bridge"] = "Bridge do Studio:",
                 ["browse"] = "Navegar",
                 ["btn_copy_script"] = "Copiar Script",
+                ["btn_inject_script"] = "Injetar Script",
                 ["back"] = "Voltar",
                 ["test"] = "Testar",
 

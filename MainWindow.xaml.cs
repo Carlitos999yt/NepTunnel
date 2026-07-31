@@ -1856,14 +1856,14 @@ namespace NepTunnel
             };
             Grid.SetColumn(mapBrowseBtn, 1); mapStack.Children.Add(mapBrowseBtn);
 
-            var copyScriptBtn = new Button
+            var injectScriptBtn = new Button
             {
-                Content = IconFactory.CreateButtonContent("copy", LocalizationService.Get("btn_copy_script"), 14),
+                Content = IconFactory.CreateButtonContent("test", LocalizationService.Get("btn_inject_script"), 14),
                 Background = (SolidColorBrush)FindResource("Card2Brush"),
                 Style = (Style)FindResource("NepButtonStyle"),
                 Padding = new Thickness(10, 4, 10, 4)
             };
-            copyScriptBtn.Click += (s, e) =>
+            injectScriptBtn.Click += (s, e) =>
             {
                 string luauPath = Path.Combine(ConfigManager.AppDataDir, "bundled_assets", "NepNameSyncScript.luau");
                 if (!File.Exists(luauPath))
@@ -1871,18 +1871,26 @@ namespace NepTunnel
                     luauPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bundled_assets", "NepNameSyncScript.luau");
                 }
 
-                if (File.Exists(luauPath))
+                if (!File.Exists(luauPath))
                 {
-                    string scriptCode = File.ReadAllText(luauPath);
-                    Clipboard.SetText(scriptCode);
-                    MessageBox.Show("✓ ¡NepNameSyncScript copiado al Portapapeles!\n\nPégalo dentro de un 'Script' en 'ServerScriptService' en tu mapa de Roblox Studio.", "Script Copiado", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("NepNameSyncScript.luau file missing.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                string scriptCode = File.ReadAllText(luauPath);
+                string selectedMap = mapTb.Text.Trim();
+
+                var (ok, msg) = ScriptInjector.InjectScriptIntoMap(selectedMap, scriptCode);
+                if (ok)
+                {
+                    MessageBox.Show(msg, "Inyección Exitosa", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
-                    MessageBox.Show("NepNameSyncScript.luau file missing.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(msg, "Error de Inyección", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             };
-            Grid.SetColumn(copyScriptBtn, 2); mapStack.Children.Add(copyScriptBtn);
+            Grid.SetColumn(injectScriptBtn, 2); mapStack.Children.Add(injectScriptBtn);
             Grid.SetRow(mapStack, 4); Grid.SetColumn(mapStack, 1); cardGrid.Children.Add(mapStack);
 
             card.Child = cardGrid;
@@ -1960,6 +1968,14 @@ namespace NepTunnel
 
                 RbxmBridgeServer.ActiveUsername = username;
                 RbxmBridgeServer.ActiveUid = uid;
+
+                // Auto-inject script for selected map or default session
+                string luauPath = Path.Combine(ConfigManager.AppDataDir, "bundled_assets", "NepNameSyncScript.luau");
+                if (File.Exists(luauPath))
+                {
+                    string scriptCode = File.ReadAllText(luauPath);
+                    ScriptInjector.InjectScriptIntoMap(mapPath, scriptCode);
+                }
 
                 ShowHostRunningView(uid, port, addr, mapPath);
             };
