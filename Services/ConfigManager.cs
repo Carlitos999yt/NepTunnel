@@ -10,7 +10,7 @@ namespace NepTunnel.Services
     public class NepConfig
     {
         [JsonPropertyName("uid")]
-        public string Uid { get; set; } = "1344077747";
+        public string Uid { get; set; } = "1000";
 
         [JsonPropertyName("username")]
         public string Username { get; set; } = "";
@@ -18,14 +18,27 @@ namespace NepTunnel.Services
         [JsonPropertyName("port")]
         public string Port { get; set; } = "55555";
 
+        [JsonPropertyName("host_addr")]
+        public string HostAddr { get; set; } = "";
+
+        [JsonPropertyName("join_addr")]
+        public string JoinAddr { get; set; } = "";
+
         [JsonPropertyName("addr")]
-        public string Addr { get; set; } = "lost-programs.gl.at.ply.gg:20573";
+        public string Addr
+        {
+            get => HostAddr;
+            set { HostAddr = value; }
+        }
 
         [JsonPropertyName("studio")]
         public string Studio { get; set; } = "";
 
         [JsonPropertyName("map")]
         public string Map { get; set; } = "";
+
+        [JsonPropertyName("import_scripts")]
+        public bool ImportScripts { get; set; } = false;
 
         [JsonPropertyName("language")]
         public string Language { get; set; } = "en";

@@ -185,7 +185,7 @@ namespace NepTunnel
                 }
             }
             UpdateStudioStatusText();
-            ShowMainMenuView();
+            ShowHostConfigView(); // VM MODE: go straight to host config
         }
 
         private void UpdateStudioStatusText()
@@ -246,6 +246,25 @@ namespace NepTunnel
             AlertCancelBtn.Click += cancelHandler;
             AlertConfirmBtn.Click += confirmHandler;
 
+            AlertOverlayGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ShowSuccessAlert(string title, string message)
+        {
+            AlertTitleTxt.Text = title;
+            AlertMessageTxt.Text = message;
+            AlertConfirmBtn.Content = "Aceptar";
+            AlertCancelBtn.Visibility = Visibility.Collapsed;
+
+            RoutedEventHandler? confirmHandler = null;
+            confirmHandler = (s, e) =>
+            {
+                AlertConfirmBtn.Click -= confirmHandler;
+                AlertCancelBtn.Visibility = Visibility.Visible;
+                AlertOverlayGrid.Visibility = Visibility.Collapsed;
+            };
+
+            AlertConfirmBtn.Click += confirmHandler;
             AlertOverlayGrid.Visibility = Visibility.Visible;
         }
         #endregion
@@ -676,7 +695,7 @@ namespace NepTunnel
                 Margin = new Thickness(0, 2, 0, 16)
             });
 
-            // Row 1 Action Buttons
+            // VM MODE: Only HOST + RSM Assistant buttons
             var row1 = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -694,46 +713,6 @@ namespace NepTunnel
             hostBtn.Click += (s, e) => ShowHostConfigView();
             row1.Children.Add(hostBtn);
 
-            var joinBtn = new Button
-            {
-                Content = IconFactory.CreateButtonContent("join", LocalizationService.Get("btn_join"), 18),
-                Background = (SolidColorBrush)FindResource("BlueBrush"),
-                Style = (Style)FindResource("NepButtonStyle"),
-                Margin = new Thickness(8, 0, 8, 0)
-            };
-            joinBtn.Click += (s, e) => ShowJoinConfigView();
-            row1.Children.Add(joinBtn);
-
-            cardStack.Children.Add(row1);
-
-            // Row 2 Action Buttons
-            var row2 = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-
-            var echoBtn = new Button
-            {
-                Content = IconFactory.CreateButtonContent("echo", LocalizationService.Get("btn_echo"), 18),
-                Background = (SolidColorBrush)FindResource("TealBrush"),
-                Style = (Style)FindResource("NepButtonStyle"),
-                Margin = new Thickness(8, 0, 8, 0)
-            };
-            echoBtn.Click += (s, e) => ShowEchoTestView();
-            row2.Children.Add(echoBtn);
-
-            var rbxmBtn = new Button
-            {
-                Content = IconFactory.CreateButtonContent("map", LocalizationService.Get("btn_rbxm"), 18),
-                Background = new SolidColorBrush(Color.FromRgb(0x7C, 0x3A, 0xED)),
-                Style = (Style)FindResource("NepButtonStyle"),
-                Margin = new Thickness(8, 0, 8, 0)
-            };
-            rbxmBtn.Click += (s, e) => ShowRbxmImporterView();
-            row2.Children.Add(rbxmBtn);
-
             var rsmBtn = new Button
             {
                 Content = IconFactory.CreateButtonContent("folder", LocalizationService.Get("btn_rsm_assistant"), 18),
@@ -742,9 +721,9 @@ namespace NepTunnel
                 Margin = new Thickness(8, 0, 8, 0)
             };
             rsmBtn.Click += (s, e) => ShowRsmAssistantView();
-            row2.Children.Add(rsmBtn);
+            row1.Children.Add(rsmBtn);
 
-            cardStack.Children.Add(row2);
+            cardStack.Children.Add(row1);
 
             card.Child = cardStack;
             stack.Children.Add(card);
@@ -1863,7 +1842,7 @@ namespace NepTunnel
             // Tunnel Address
             var addrLbl = new TextBlock { Text = LocalizationService.Get("lbl_tunnel_addr"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
             Grid.SetRow(addrLbl, 3); Grid.SetColumn(addrLbl, 0); cardGrid.Children.Add(addrLbl);
-            var addrTb = new TextBox { Text = cfg.Addr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
+            var addrTb = new TextBox { Text = cfg.HostAddr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
             Grid.SetRow(addrTb, 3); Grid.SetColumn(addrTb, 1); cardGrid.Children.Add(addrTb);
 
             // Map File (Optional)
@@ -1931,6 +1910,30 @@ namespace NepTunnel
             tutBtn.Click += (s, e) => ShowTutorialView();
             btnRow.Children.Add(tutBtn);
 
+            // Import / Update Scripts Action Button
+            var importScriptsBtn = new Button
+            {
+                Content = IconFactory.CreateButtonContent("file-code", "Importar / Actualizar Scripts", 14),
+                Background = (SolidColorBrush)FindResource("Card2Brush"),
+                Style = (Style)FindResource("NepButtonStyle"),
+                Margin = new Thickness(6, 0, 6, 0)
+            };
+            importScriptsBtn.Click += (s, e) =>
+            {
+                try
+                {
+                    RbxmBridgeServer.ForceScriptImport = true;
+                    RbxmBridgeServer.ScriptsImported = true;
+                    bool ok = PluginInstaller.EnsurePluginInstalled(out string msg);
+                    ShowSuccessAlert("✓ Importación de Scripts", "✓ Scripts importados/actualizados correctamente en Roblox Studio.\n\nLos nuevos scripts oficiales del tabulador han sido insertados.");
+                }
+                catch (Exception ex)
+                {
+                    ShowSuccessAlert("✗ Error de Importación", $"No se pudieron importar los scripts: {ex.Message}");
+                }
+            };
+            btnRow.Children.Add(importScriptsBtn);
+
             var launchBtn = new Button
             {
                 Content = IconFactory.CreateButtonContent("play", LocalizationService.Get("btn_launch_server"), 16),
@@ -1975,6 +1978,7 @@ namespace NepTunnel
                 cfg.Uid = uid;
                 cfg.Username = username;
                 cfg.Port = port;
+                cfg.HostAddr = addr;
                 cfg.Addr = addr;
                 cfg.Map = mapPath;
                 cfg.Studio = _studioPath;
@@ -2028,27 +2032,27 @@ namespace NepTunnel
                 Margin = new Thickness(0, 10, 0, 0)
             };
 
-            var joinLocalBtn = new Button
+            // VM MODE: No client launch button — server only to save resources
+            var optimizeBtn = new Button
             {
-                Content = IconFactory.CreateButtonContent("join", LocalizationService.Get("btn_join_locally"), 16),
-                Background = (SolidColorBrush)FindResource("WarnBrush"),
+                Content = IconFactory.CreateButtonContent("test", "Optimizar Gráficos VM", 14),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#059669")),
                 Style = (Style)FindResource("NepButtonStyle"),
-                IsEnabled = false,
                 Margin = new Thickness(6, 0, 6, 0)
             };
-            joinLocalBtn.Click += (s, e) =>
+            optimizeBtn.Click += (s, e) =>
             {
                 try
                 {
-                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", port, pg, tg, uid, "StudioPlayer_Host");
-                    LogAppend(logBox.RichText, "Local client launched.", "info");
+                    VmOptimizer.ApplyMinGraphics();
+                    LogAppend(logBox.RichText, "✓ Gráficos de Roblox Studio bajados al mínimo.", "ok");
                 }
                 catch (Exception ex)
                 {
-                    LogAppend(logBox.RichText, $"Launch error: {ex.Message}", "err");
+                    LogAppend(logBox.RichText, $"No se pudo optimizar: {ex.Message}", "err");
                 }
             };
-            ctrlsRow.Children.Add(joinLocalBtn);
+            ctrlsRow.Children.Add(optimizeBtn);
 
             var stopBtn = new Button
             {
@@ -2103,20 +2107,29 @@ namespace NepTunnel
 
                 if (!string.IsNullOrEmpty(mapPath) && File.Exists(mapPath))
                 {
-                    Dispatcher.Invoke(() => LogAppend(logBox.RichText, $"Injecting map: {Path.GetFileName(mapPath)}", "warn"));
+                    Dispatcher.Invoke(() => LogAppend(logBox.RichText, $"Injecting selected map: {Path.GetFileName(mapPath)}", "warn"));
                     if (MapInjector.InjectMap(mapPath))
                     {
                         Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✓ Map copied to Roblox runtime cache", "ok"));
                     }
                     else
                     {
-                        Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✗ Failed to inject map. Studio might load default cache.", "err"));
+                        Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✗ Failed to inject map. Studio will load default cache.", "err"));
+                    }
+                }
+                else
+                {
+                    Dispatcher.Invoke(() => LogAppend(logBox.RichText, "No map selected. Injecting default Roblox Baseplate map…", "warn"));
+                    if (MapInjector.InjectMap(""))
+                    {
+                        Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✓ Default Baseplate map loaded into Roblox runtime cache", "ok"));
                     }
                 }
 
                 Dispatcher.Invoke(() => LogAppend(logBox.RichText, "Launching Studio server process…"));
                 try
                 {
+                    UdpProxy.StopProxy(wait: false);
                     RobloxStudioService.LaunchServer(_studioPath, port, uid, pg, tg);
                     Dispatcher.Invoke(() => LogAppend(logBox.RichText, "Server started! Waiting 5 s for Studio init…", "ok"));
                     ConfigManager.WriteSessionLog(pg, tg, addr, port, uid);
@@ -2126,7 +2139,6 @@ namespace NepTunnel
                         LogAppend(logBox.RichText, "● SERVER IS LIVE", "ok");
                         LogAppend(logBox.RichText, $"Session info saved → {ConfigManager.LogFile}", "dim");
                         Clipboard.SetText(addr);
-                        joinLocalBtn.IsEnabled = true;
                         SetStatus(LocalizationService.Get("status_live"), (SolidColorBrush)FindResource("OkBrush"));
                     });
                 }
@@ -2199,7 +2211,7 @@ namespace NepTunnel
                 Margin = new Thickness(0, 0, 0, 4)
             });
 
-            var addrTb = new TextBox { Text = cfg.Addr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 0, 0, 6) };
+            var addrTb = new TextBox { Text = !string.IsNullOrEmpty(cfg.JoinAddr) ? cfg.JoinAddr : cfg.HostAddr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 0, 0, 6) };
             cardStack.Children.Add(addrTb);
 
             cardStack.Children.Add(new TextBlock
@@ -2277,7 +2289,7 @@ namespace NepTunnel
                 errLbl.Text = "";
 
                 cfg.Username = username;
-                cfg.Addr = addr;
+                cfg.JoinAddr = addr;
                 ConfigManager.SaveConfig(cfg);
 
                 RbxmBridgeServer.ActiveUsername = username;
@@ -2379,9 +2391,19 @@ namespace NepTunnel
 
                 Dispatcher.Invoke(() =>
                 {
-                    LogAppend(logBox.RichText, $"Target     : {dstHost}:{dstPort}", "info");
-                    LogAppend(logBox.RichText, "Connecting directly to remote host…");
+                    LogAppend(logBox.RichText, "Starting UDP Proxy...", "dim");
                 });
+
+                bool proxyStarted = UdpProxy.StartProxy(dstHost, dstPort);
+                if (!proxyStarted)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        LogAppend(logBox.RichText, "✗ Proxy failed to start (DNS timeout?).", "err");
+                        SetStatus("Connection Failed", (SolidColorBrush)FindResource("ErrBrush"));
+                    });
+                    return;
+                }
 
                 // Enviar unos paquetes de calentamiento para perforar el NAT (opcional pero ayuda)
                 int warmed = UdpProxy.WarmTunnel(dstHost, dstPort);
@@ -2392,14 +2414,14 @@ namespace NepTunnel
                 {
                     LogAppend(logBox.RichText, $"Parent GUID: {pg}", "dim");
                     LogAppend(logBox.RichText, $"Play  GUID : {tg}", "dim");
-                    LogAppend(logBox.RichText, "Launching Studio client…");
+                    LogAppend(logBox.RichText, "Launching Studio client via Local Proxy…");
                 });
 
                 try
                 {
                     var cfg = ConfigManager.LoadConfig();
-                    // Connect DIRECTLY to dstHost and dstPort (like Python did)
-                    RobloxStudioService.LaunchClient(_studioPath, dstHost, dstPort.ToString(), pg, tg, cfg.Uid, "StudioPlayer_Proxy");
+                    string clientNick = !string.IsNullOrWhiteSpace(cfg.Username) ? cfg.Username : cfg.Uid;
+                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", UdpProxy.PROXY_PORT.ToString(), pg, tg, cfg.Uid, "StudioPlayer_Proxy");
                     Dispatcher.Invoke(() =>
                     {
                         LogAppend(logBox.RichText, "● CONNECTED — Studio launched", "ok");

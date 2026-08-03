@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -17,8 +18,21 @@ namespace NepTunnel.Services
         private static HttpListener? _listener = null;
         private static bool _isRunning = false;
 
-        public static string ActiveUsername { get; set; } = "Carlitos";
-        public static string ActiveUid { get; set; } = "1344077747";
+        public static string ActiveUsername { get; set; } = "Player";
+        public static string ActiveUid { get; set; } = "1000";
+        public static bool ScriptsImported { get; set; } = false;
+        public static bool ForceScriptImport { get; set; } = false;
+
+        private static readonly ConcurrentQueue<string> ClientNicknamesQueue = new();
+
+        public static void RegisterClientNickname(string nickname)
+        {
+            if (!string.IsNullOrWhiteSpace(nickname) && nickname != "Player" && nickname != "<ur user id here>")
+            {
+                ClientNicknamesQueue.Enqueue(nickname.Trim());
+                Logger.Log($"[Bridge] Registered remote client nickname: '{nickname.Trim()}'");
+            }
+        }
 
         public static bool IsRunning => _isRunning;
 
@@ -99,16 +113,50 @@ namespace NepTunnel.Services
             {
                 if (rawPath == "/identity" || rawPath == "/user")
                 {
-                    string safeName = string.IsNullOrWhiteSpace(ActiveUsername) ? "Player" : ActiveUsername;
-                    string safeUid = string.IsNullOrWhiteSpace(ActiveUid) ? "1000" : ActiveUid;
+                    string queryRole = req.QueryString["role"] ?? "";
+                    string targetName;
 
-                    Logger.Log($"[Bridge] Roblox Studio queried identity -> Name: '{safeName}', UID: '{safeUid}'");
+                    if (queryRole == "host")
+                    {
+                        targetName = string.IsNullOrWhiteSpace(ActiveUsername) ? "Player" : ActiveUsername;
+                    }
+                    else if (queryRole == "client" || queryRole == "next")
+                    {
+                        if (ClientNicknamesQueue.TryDequeue(out var clientNick))
+                        {
+                            targetName = clientNick;
+                        }
+                        else
+                        {
+                            targetName = "Player";
+                        }
+                    }
+                    else
+                    {
+                        // Default logic: Dequeue client if available, else host username
+                        if (ClientNicknamesQueue.TryDequeue(out var clientNick))
+                        {
+                            targetName = clientNick;
+                        }
+                        else
+                        {
+                            targetName = string.IsNullOrWhiteSpace(ActiveUsername) ? "Player" : ActiveUsername;
+                        }
+                    }
+
+                    string safeUid = string.IsNullOrWhiteSpace(ActiveUid) ? "1000" : ActiveUid;
+                    bool doForce = ForceScriptImport;
+                    ForceScriptImport = false; // Reset one-shot trigger!
+
+                    Logger.Log($"[Bridge] Roblox Studio queried identity (role='{queryRole}') -> Name: '{targetName}', UID: '{safeUid}', force='{doForce}'");
                     SendJson(res, 200, new
                     {
                         status = "ok",
-                        name = safeName,
-                        displayName = safeName,
-                        uid = safeUid
+                        name = targetName,
+                        displayName = targetName,
+                        uid = safeUid,
+                        imported = ScriptsImported,
+                        force_import = doForce
                     });
                 }
                 else if (rawPath == "/poll")

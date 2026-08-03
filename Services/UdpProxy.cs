@@ -71,7 +71,7 @@ namespace NepTunnel.Services
                     try
                     {
                         var dnsTask = Dns.GetHostAddressesAsync(dstHost);
-                        if (!dnsTask.Wait(1500))
+                        if (!dnsTask.Wait(5000))
                         {
                             Console.WriteLine("[proxy] DNS lookup timed out");
                             return false;
@@ -86,10 +86,10 @@ namespace NepTunnel.Services
                     if (addresses.Length == 0) return false;
                     IPAddress targetIp = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? addresses[0];
 
-                    _localListener = new Socket(targetIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                    _localListener = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                     _localListener.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                     DisableConnReset(_localListener);
-                    _localListener.Bind(new IPEndPoint(targetIp.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Loopback : IPAddress.Loopback, PROXY_PORT));
+                    _localListener.Bind(new IPEndPoint(IPAddress.Loopback, PROXY_PORT));
 
                     _isRunning = true;
 
@@ -127,6 +127,16 @@ namespace NepTunnel.Services
                     catch (ObjectDisposedException) { break; }
 
                     if (result.ReceivedBytes <= 0) continue;
+
+                    if (result.ReceivedBytes >= 9 &&
+                        buffer[0] == (byte)'N' && buffer[1] == (byte)'E' && buffer[2] == (byte)'P' &&
+                        buffer[3] == (byte)'_' && buffer[4] == (byte)'N' && buffer[5] == (byte)'I' &&
+                        buffer[6] == (byte)'C' && buffer[7] == (byte)'K' && buffer[8] == (byte)':')
+                    {
+                        string clientNick = System.Text.Encoding.UTF8.GetString(buffer, 9, result.ReceivedBytes - 9);
+                        RbxmBridgeServer.RegisterClientNickname(clientNick);
+                        continue;
+                    }
 
                     if (result.RemoteEndPoint is IPEndPoint clientEp)
                     {
@@ -250,6 +260,34 @@ namespace NepTunnel.Services
                 catch { }
             }
             _sessions.Clear();
+        }
+
+        public static void SendClientNickname(string dstHost, int dstPort, string nickname)
+        {
+            if (string.IsNullOrWhiteSpace(dstHost) || dstPort <= 0 || string.IsNullOrWhiteSpace(nickname)) return;
+            try
+            {
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        var addresses = Dns.GetHostAddresses(dstHost);
+                        if (addresses.Length == 0) return;
+                        var targetIp = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork) ?? addresses[0];
+                        var remoteEp = new IPEndPoint(targetIp, dstPort);
+                        using var sock = new Socket(targetIp.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                        DisableConnReset(sock);
+                        byte[] payload = System.Text.Encoding.UTF8.GetBytes("NEP_NICK:" + nickname.Trim());
+                        for (int i = 0; i < 5; i++)
+                        {
+                            sock.SendTo(payload, remoteEp);
+                            Thread.Sleep(50);
+                        }
+                    }
+                    catch { }
+                });
+            }
+            catch { }
         }
 
         public static int WarmTunnel(string? dstHost = null, int dstPort = 0, int proxyPort = PROXY_PORT, int packets = 5)

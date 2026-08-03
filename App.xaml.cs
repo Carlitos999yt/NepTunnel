@@ -11,6 +11,7 @@ namespace NepTunnel
             base.OnStartup(e);
 
             Logger.Log("NepTunnel Application Started.");
+            PluginInstaller.EnsurePluginInstalled();
 
             // Register emergency process exit handler for Task Manager / ALT+F4 force close
             AppDomain.CurrentDomain.ProcessExit += (s, ev) =>

@@ -291,20 +291,13 @@ namespace NepTunnel.Services
                 "-task", "StartClient",
                 "-placeId", "0",
                 "-universeId", "0",
-                "-placeVersion", "0",
+                "-placeVersion", "1",
                 "-server", server,
                 "-port", port,
                 "-parentSessionGuid", pg,
                 "-playTestSessionGuid", tg,
                 "-instanceId", inst
             };
-
-            // Solo enviar el userid si es un número válido. Si el usuario escribió letras (como <ur user id here>), se ignora para no romper Roblox Studio.
-            if (!string.IsNullOrWhiteSpace(uid) && long.TryParse(uid, out _))
-            {
-                args.Add("-userid");
-                args.Add(uid);
-            }
 
             var psi = BuildCmd(studio, args);
 

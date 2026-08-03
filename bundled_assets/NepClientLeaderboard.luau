@@ -1,15 +1,39 @@
 -- =========================================================================
---  NepTunnel - Client Leaderboard UI & TAB Key Handler
---  Colocar este LocalScript en: StarterGui (o StarterPlayerScripts)
+--  NepTunnel - Client Leaderboard UI & Identity Sync
+--  Colocar este LocalScript en: StarterGui
 -- =========================================================================
 
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
 local ContextActionService = game:GetService("ContextActionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 local localPlayer = Players.LocalPlayer
 
--- Desactivar la lista nativa de Roblox desde el cliente continuamente
+-- 1. Intento de Sync de Nickname desde LocalScript como respaldo
+task.spawn(function()
+    for attempt = 1, 10 do
+        local success, res = pcall(function()
+            return HttpService:GetAsync("http://127.0.0.1:7878/identity")
+        end)
+        if success and res then
+            local decSuccess, data = pcall(function()
+                return HttpService:JSONDecode(res)
+            end)
+            if decSuccess and data and data.name and data.name ~= "" and data.name ~= "Player" then
+                local syncEvent = ReplicatedStorage:WaitForChild("NepSyncNickEvent", 10)
+                if syncEvent then
+                    syncEvent:FireServer(data.name)
+                    break
+                end
+            end
+        end
+        task.wait(1)
+    end
+end)
+
+-- 2. Desactivar la lista nativa de Roblox continuamente
 task.spawn(function()
     while true do
         pcall(function()
@@ -19,6 +43,7 @@ task.spawn(function()
     end
 end)
 
+-- 3. Crear el Leaderboard personalizado
 local function buildLeaderboard()
     local playerGui = localPlayer:WaitForChild("PlayerGui")
 
@@ -42,7 +67,6 @@ local function buildLeaderboard()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = frame
 
-    -- Column Headers: Personas | Minutes
     local headerName = Instance.new("TextLabel")
     headerName.Size = UDim2.new(0.65, 0, 0, 30)
     headerName.Position = UDim2.new(0, 10, 0, 2)
@@ -65,7 +89,6 @@ local function buildLeaderboard()
     headerMin.TextXAlignment = Enum.TextXAlignment.Right
     headerMin.Parent = frame
 
-    -- Divider
     local div = Instance.new("Frame")
     div.Size = UDim2.new(1, -20, 0, 1)
     div.Position = UDim2.new(0, 10, 0, 32)
@@ -73,7 +96,6 @@ local function buildLeaderboard()
     div.BorderSizePixel = 0
     div.Parent = frame
 
-    -- Rows Container
     local container = Instance.new("Frame")
     container.Name = "RowsContainer"
     container.Size = UDim2.new(1, -20, 1, -36)
@@ -135,38 +157,24 @@ local function buildLeaderboard()
             end
             task.spawn(hookLeaderstats)
 
+            if customVal then customVal.Changed:Connect(updateList) end
             yOffset = yOffset + 26
         end
-
         frame.Size = UDim2.new(0, 220, 0, math.max(65, 42 + yOffset))
     end
 
-    -- Update automatically when players join or leave
     Players.PlayerAdded:Connect(updateList)
     Players.PlayerRemoving:Connect(updateList)
     updateList()
 
-    -- Bloquear la tecla TAB para que Roblox NUNCA abra su tabulador nativo
     local function handleTabAction(actionName, inputState, inputObject)
-        if inputState == Enum.UserInputState.Begin then
-            frame.Visible = not frame.Visible
-        end
+        if inputState == Enum.UserInputState.Begin then frame.Visible = not frame.Visible end
         return Enum.ContextActionResult.Sink
     end
 
-    pcall(function()
-        ContextActionService:UnbindAction("NepToggleCustomTab")
-    end)
-    ContextActionService:BindActionAtPriority(
-        "NepToggleCustomTab",
-        handleTabAction,
-        false,
-        Enum.ContextActionPriority.High.Value + 2000,
-        Enum.KeyCode.Tab
-    )
-
+    pcall(function() ContextActionService:UnbindAction("NepToggleCustomTab") end)
+    ContextActionService:BindActionAtPriority("NepToggleCustomTab", handleTabAction, false, Enum.ContextActionPriority.High.Value + 2000, Enum.KeyCode.Tab)
     screenGui.Parent = playerGui
 end
 
 task.spawn(buildLeaderboard)
-print("[NepTunnel] Client Leaderboard UI (TAB Sink Protection) initialized!")
