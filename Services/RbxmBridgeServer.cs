@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -16,6 +17,22 @@ namespace NepTunnel.Services
         private static readonly object LockObj = new object();
         private static HttpListener? _listener = null;
         private static bool _isRunning = false;
+
+        public static string ActiveUsername { get; set; } = "Player";
+        public static string ActiveUid { get; set; } = "1000";
+        public static bool ScriptsImported { get; set; } = false;
+        public static bool ForceScriptImport { get; set; } = false;
+
+        private static readonly ConcurrentQueue<string> ClientNicknamesQueue = new();
+
+        public static void RegisterClientNickname(string nickname)
+        {
+            if (!string.IsNullOrWhiteSpace(nickname) && nickname != "Player" && nickname != "<ur user id here>")
+            {
+                ClientNicknamesQueue.Enqueue(nickname.Trim());
+                Logger.Log($"[Bridge] Registered remote client nickname: '{nickname.Trim()}'");
+            }
+        }
 
         public static bool IsRunning => _isRunning;
 
@@ -68,7 +85,7 @@ namespace NepTunnel.Services
                 res.StatusCode = statusCode;
                 res.ContentType = "application/json";
                 res.ContentLength64 = bytes.Length;
-                res.AddHeader("Access-Control-Allow-Origin", "http://127.0.0.1:7878");
+                res.AddHeader("Access-Control-Allow-Origin", "*");
                 res.OutputStream.Write(bytes, 0, bytes.Length);
                 res.Close();
             }
@@ -83,7 +100,7 @@ namespace NepTunnel.Services
             if (req.HttpMethod == "OPTIONS")
             {
                 res.StatusCode = 204;
-                res.AddHeader("Access-Control-Allow-Origin", "http://127.0.0.1:7878");
+                res.AddHeader("Access-Control-Allow-Origin", "*");
                 res.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
                 res.AddHeader("Access-Control-Allow-Headers", "Content-Type");
                 res.Close();
@@ -94,7 +111,55 @@ namespace NepTunnel.Services
 
             if (req.HttpMethod == "GET")
             {
-                if (rawPath == "/poll")
+                if (rawPath == "/identity" || rawPath == "/user")
+                {
+                    string queryRole = req.QueryString["role"] ?? "";
+                    string targetName;
+
+                    if (queryRole == "host")
+                    {
+                        targetName = string.IsNullOrWhiteSpace(ActiveUsername) ? "Player" : ActiveUsername;
+                    }
+                    else if (queryRole == "client" || queryRole == "next")
+                    {
+                        if (ClientNicknamesQueue.TryDequeue(out var clientNick))
+                        {
+                            targetName = clientNick;
+                        }
+                        else
+                        {
+                            targetName = "Player";
+                        }
+                    }
+                    else
+                    {
+                        // Default logic: Dequeue client if available, else host username
+                        if (ClientNicknamesQueue.TryDequeue(out var clientNick))
+                        {
+                            targetName = clientNick;
+                        }
+                        else
+                        {
+                            targetName = string.IsNullOrWhiteSpace(ActiveUsername) ? "Player" : ActiveUsername;
+                        }
+                    }
+
+                    string safeUid = string.IsNullOrWhiteSpace(ActiveUid) ? "1000" : ActiveUid;
+                    bool doForce = ForceScriptImport;
+                    ForceScriptImport = false; // Reset one-shot trigger!
+
+                    Logger.Log($"[Bridge] Roblox Studio queried identity (role='{queryRole}') -> Name: '{targetName}', UID: '{safeUid}', force='{doForce}'");
+                    SendJson(res, 200, new
+                    {
+                        status = "ok",
+                        name = targetName,
+                        displayName = targetName,
+                        uid = safeUid,
+                        imported = ScriptsImported,
+                        force_import = doForce
+                    });
+                }
+                else if (rawPath == "/poll")
                 {
                     string? pending;
                     lock (LockObj)
@@ -148,7 +213,7 @@ namespace NepTunnel.Services
                         res.ContentType = "application/octet-stream";
                         res.ContentLength64 = data.Length;
                         res.AddHeader("Content-Disposition", $"attachment; filename=\"{safeFileName}\"");
-                        res.AddHeader("Access-Control-Allow-Origin", "http://127.0.0.1:7878");
+                        res.AddHeader("Access-Control-Allow-Origin", "*");
                         res.OutputStream.Write(data, 0, data.Length);
                         res.Close();
                     }

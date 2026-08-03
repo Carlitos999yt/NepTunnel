@@ -211,27 +211,26 @@ namespace NepTunnel.Services
 
             try
             {
-                using var classesKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Classes", writable: true);
-                if (classesKey != null)
-                {
-                    try { classesKey.DeleteSubKeyTree("roblox-studio", throwOnMissingSubKey: false); } catch { }
-                    try { classesKey.DeleteSubKeyTree("roblox-studio-auth", throwOnMissingSubKey: false); } catch { }
-                }
-
+                // Delete ONLY RSM registry subkeys under HKCU\Software (NEVER touch Roblox Player keys)
                 using var hkcuSoftware = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software", writable: true);
                 if (hkcuSoftware != null)
                 {
                     try { hkcuSoftware.DeleteSubKeyTree("Roblox Studio Mod Manager", throwOnMissingSubKey: false); } catch { }
                     try { hkcuSoftware.DeleteSubKeyTree("Roblox Studio", throwOnMissingSubKey: false); } catch { }
-                    try { hkcuSoftware.DeleteSubKeyTree("Roblox", throwOnMissingSubKey: false); } catch { }
-                    try { hkcuSoftware.DeleteSubKeyTree("ROBLOX Corporation", throwOnMissingSubKey: false); } catch { }
                 }
 
+                // Delete ONLY RSM specific directories under LocalAppData (NEVER touch %LOCALAPPDATA%\Roblox or Roblox Player)
                 string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                string versionsFolder = Path.Combine(localAppData, "Roblox", "Versions");
-                if (Directory.Exists(versionsFolder))
+                string rsmDir = Path.Combine(localAppData, "Roblox Studio");
+                if (Directory.Exists(rsmDir))
                 {
-                    try { Directory.Delete(versionsFolder, true); } catch { }
+                    try { Directory.Delete(rsmDir, true); } catch { }
+                }
+
+                string rsmModDir = Path.Combine(localAppData, "Roblox Studio Mod Manager");
+                if (Directory.Exists(rsmModDir))
+                {
+                    try { Directory.Delete(rsmModDir, true); } catch { }
                 }
             }
             catch { }

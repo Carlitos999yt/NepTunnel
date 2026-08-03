@@ -131,7 +131,10 @@ namespace NepTunnel.Services
                 }
             }
             catch { }
-            return list;
+            return list.OrderByDescending(i =>
+            {
+                try { return File.GetLastWriteTime(i.Path); } catch { return DateTime.MinValue; }
+            }).ToList();
         }
 
         private static readonly List<Process> _spawnedProcesses = new();
@@ -141,44 +144,22 @@ namespace NepTunnel.Services
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-                // Priority #1: Roblox Studio Mod Manager (RSM)
-                string rsmExe = Path.Combine(localAppData, "Roblox Studio", "RobloxStudioBeta.exe");
-                if (File.Exists(rsmExe))
+                var installs = GetDetectedStudioInstallations();
+                if (installs.Count > 0)
                 {
-                    return rsmExe;
-                }
-
-                string rsmAlt = Path.Combine(localAppData, "Roblox Studio Mod Manager", "RobloxStudioBeta.exe");
-                if (File.Exists(rsmAlt))
-                {
-                    return rsmAlt;
-                }
-
-                // Priority #2: Bloxstrap Bootstrapper
-                string bloxstrapDir = Path.Combine(localAppData, "Bloxstrap", "Versions");
-                if (Directory.Exists(bloxstrapDir))
-                {
-                    var files = Directory.GetFiles(bloxstrapDir, "RobloxStudioBeta.exe", SearchOption.AllDirectories)
-                                         .OrderBy(f => File.GetLastWriteTime(f))
-                                         .ToList();
-                    if (files.Count > 0) return files.Last();
-                }
-
-                // Priority #3: Standard Roblox Studio
-                string versionsDir = Path.Combine(localAppData, "Roblox", "Versions");
-                if (Directory.Exists(versionsDir))
-                {
-                    var files = Directory.GetFiles(versionsDir, "RobloxStudioBeta.exe", SearchOption.AllDirectories)
-                                         .OrderBy(f => File.GetLastWriteTime(f))
-                                         .ToList();
-                    if (files.Count > 0)
+                    // Pick the installation with the latest File.GetLastWriteTime
+                    var latest = installs.OrderByDescending(i =>
                     {
-                        return files.Last();
+                        try { return File.GetLastWriteTime(i.Path); } catch { return DateTime.MinValue; }
+                    }).FirstOrDefault();
+
+                    if (latest != null && File.Exists(latest.Path))
+                    {
+                        return latest.Path;
                     }
                 }
 
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 string alt = Path.Combine(localAppData, "Roblox", "RobloxStudioBeta.exe");
                 if (File.Exists(alt))
                 {
@@ -303,7 +284,7 @@ namespace NepTunnel.Services
             }
         }
 
-        public static void LaunchClient(string studio, string server, string port, string pg, string tg, string inst = "StudioPlayer_0")
+        public static void LaunchClient(string studio, string server, string port, string pg, string tg, string uid = "1000", string inst = "StudioPlayer_0")
         {
             var args = new List<string>
             {

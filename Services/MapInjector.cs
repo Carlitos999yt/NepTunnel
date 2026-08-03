@@ -30,8 +30,17 @@ namespace NepTunnel.Services
         {
             if (string.IsNullOrWhiteSpace(mapPath) || !File.Exists(mapPath))
             {
-                return false;
+                string defaultMap = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bundled_assets", "default_baseplate.rbxlx");
+                if (File.Exists(defaultMap))
+                {
+                    mapPath = defaultMap;
+                }
+                else
+                {
+                    return false;
+                }
             }
+
             string target = GetRuntimeServerPlace();
             if (string.IsNullOrEmpty(target))
             {
@@ -52,11 +61,12 @@ namespace NepTunnel.Services
                 }
 
                 File.Copy(mapPath, target, true);
+                Console.WriteLine($"[MapInjector] Successfully injected map: {mapPath} -> {target}");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[map] Failed to inject: {ex.Message}");
+                Console.WriteLine($"[MapInjector] Failed to inject: {ex.Message}");
                 return false;
             }
         }

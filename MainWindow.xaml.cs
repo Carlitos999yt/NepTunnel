@@ -170,9 +170,22 @@ namespace NepTunnel
 
         private void OnStudioFound(string path)
         {
-            _studioPath = path;
+            var cfg = ConfigManager.LoadConfig();
+            if (!string.IsNullOrEmpty(cfg.Studio) && File.Exists(cfg.Studio))
+            {
+                _studioPath = cfg.Studio;
+            }
+            else
+            {
+                _studioPath = path;
+                if (!string.IsNullOrEmpty(_studioPath))
+                {
+                    cfg.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfg);
+                }
+            }
             UpdateStudioStatusText();
-            ShowMainMenuView();
+            ShowHostConfigView(); // VM MODE: go straight to host config
         }
 
         private void UpdateStudioStatusText()
@@ -233,6 +246,25 @@ namespace NepTunnel
             AlertCancelBtn.Click += cancelHandler;
             AlertConfirmBtn.Click += confirmHandler;
 
+            AlertOverlayGrid.Visibility = Visibility.Visible;
+        }
+
+        private void ShowSuccessAlert(string title, string message)
+        {
+            AlertTitleTxt.Text = title;
+            AlertMessageTxt.Text = message;
+            AlertConfirmBtn.Content = "Aceptar";
+            AlertCancelBtn.Visibility = Visibility.Collapsed;
+
+            RoutedEventHandler? confirmHandler = null;
+            confirmHandler = (s, e) =>
+            {
+                AlertConfirmBtn.Click -= confirmHandler;
+                AlertCancelBtn.Visibility = Visibility.Visible;
+                AlertOverlayGrid.Visibility = Visibility.Collapsed;
+            };
+
+            AlertConfirmBtn.Click += confirmHandler;
             AlertOverlayGrid.Visibility = Visibility.Visible;
         }
         #endregion
@@ -432,6 +464,11 @@ namespace NepTunnel
                         _studioPath = selectedPath;
                         studioLbl.Text = _studioPath;
                         studioLbl.Foreground = (SolidColorBrush)FindResource("GlowBrush");
+
+                        var cfg = ConfigManager.LoadConfig();
+                        cfg.Studio = _studioPath;
+                        ConfigManager.SaveConfig(cfg);
+
                         SetStatus($"Ruta Studio seleccionada: {inst.Name}", (SolidColorBrush)FindResource("OkBrush"));
                         RootMainGrid.Children.Remove(overlayGrid);
                     };
@@ -658,7 +695,7 @@ namespace NepTunnel
                 Margin = new Thickness(0, 2, 0, 16)
             });
 
-            // Row 1 Action Buttons
+            // VM MODE: Only HOST + RSM Assistant buttons
             var row1 = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -676,46 +713,6 @@ namespace NepTunnel
             hostBtn.Click += (s, e) => ShowHostConfigView();
             row1.Children.Add(hostBtn);
 
-            var joinBtn = new Button
-            {
-                Content = IconFactory.CreateButtonContent("join", LocalizationService.Get("btn_join"), 18),
-                Background = (SolidColorBrush)FindResource("BlueBrush"),
-                Style = (Style)FindResource("NepButtonStyle"),
-                Margin = new Thickness(8, 0, 8, 0)
-            };
-            joinBtn.Click += (s, e) => ShowJoinConfigView();
-            row1.Children.Add(joinBtn);
-
-            cardStack.Children.Add(row1);
-
-            // Row 2 Action Buttons
-            var row2 = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 4)
-            };
-
-            var echoBtn = new Button
-            {
-                Content = IconFactory.CreateButtonContent("echo", LocalizationService.Get("btn_echo"), 18),
-                Background = (SolidColorBrush)FindResource("TealBrush"),
-                Style = (Style)FindResource("NepButtonStyle"),
-                Margin = new Thickness(8, 0, 8, 0)
-            };
-            echoBtn.Click += (s, e) => ShowEchoTestView();
-            row2.Children.Add(echoBtn);
-
-            var rbxmBtn = new Button
-            {
-                Content = IconFactory.CreateButtonContent("map", LocalizationService.Get("btn_rbxm"), 18),
-                Background = new SolidColorBrush(Color.FromRgb(0x7C, 0x3A, 0xED)),
-                Style = (Style)FindResource("NepButtonStyle"),
-                Margin = new Thickness(8, 0, 8, 0)
-            };
-            rbxmBtn.Click += (s, e) => ShowRbxmImporterView();
-            row2.Children.Add(rbxmBtn);
-
             var rsmBtn = new Button
             {
                 Content = IconFactory.CreateButtonContent("folder", LocalizationService.Get("btn_rsm_assistant"), 18),
@@ -724,9 +721,9 @@ namespace NepTunnel
                 Margin = new Thickness(8, 0, 8, 0)
             };
             rsmBtn.Click += (s, e) => ShowRsmAssistantView();
-            row2.Children.Add(rsmBtn);
+            row1.Children.Add(rsmBtn);
 
-            cardStack.Children.Add(row2);
+            cardStack.Children.Add(row1);
 
             card.Child = cardStack;
             stack.Children.Add(card);
@@ -785,6 +782,11 @@ namespace NepTunnel
                     _studioPath = dialog.FileName;
                     studioLbl.Text = _studioPath;
                     studioLbl.Foreground = (SolidColorBrush)FindResource("GlowBrush");
+
+                    var cfg = ConfigManager.LoadConfig();
+                    cfg.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfg);
+
                     SetStatus($"Studio set  ·  {_studioPath}", (SolidColorBrush)FindResource("OkBrush"));
                 }
             };
@@ -813,6 +815,7 @@ namespace NepTunnel
 
             var details = new[]
             {
+                (LocalizationService.Get("lbl_username"), !string.IsNullOrWhiteSpace(cfg.Username) ? cfg.Username : "(Por defecto / Default)"),
                 (LocalizationService.Get("lbl_tunnel_addr"), cfg.Addr),
                 (LocalizationService.Get("lbl_server_port"), cfg.Port),
                 (LocalizationService.Get("lbl_uid"), cfg.Uid),
@@ -1399,7 +1402,15 @@ namespace NepTunnel
                             installBtn.IsEnabled = true;
                             if (success)
                             {
-                                SetStatus("RSM Mod Manager iniciado para v0.729.0.7290838", (SolidColorBrush)FindResource("OkBrush"));
+                                string rsmExe = RsmInstallerService.GetRsmStudioExePath();
+                                if (File.Exists(rsmExe))
+                                {
+                                    _studioPath = rsmExe;
+                                    var cfg = ConfigManager.LoadConfig();
+                                    cfg.Studio = _studioPath;
+                                    ConfigManager.SaveConfig(cfg);
+                                }
+                                SetStatus("RSM instalado y seleccionado como activo", (SolidColorBrush)FindResource("OkBrush"));
                             }
                             else
                             {
@@ -1448,8 +1459,21 @@ namespace NepTunnel
                         Dispatcher.Invoke(() =>
                         {
                             repairBtn.IsEnabled = true;
-                            _studioPath = RobloxStudioService.GetStudioPath();
-                            SetStatus("Reparación desde GitHub completada.", (SolidColorBrush)FindResource("OkBrush"));
+                            string rsmExe = RsmInstallerService.GetRsmStudioExePath();
+                            if (File.Exists(rsmExe))
+                            {
+                                _studioPath = rsmExe;
+                            }
+                            else
+                            {
+                                _studioPath = RobloxStudioService.GetStudioPath();
+                            }
+
+                            var cfg = ConfigManager.LoadConfig();
+                            cfg.Studio = _studioPath;
+                            ConfigManager.SaveConfig(cfg);
+
+                            SetStatus("Reparación RSM completada y seleccionada como activa.", (SolidColorBrush)FindResource("OkBrush"));
                             ShowRsmAssistantView();
                         });
                     }
@@ -1792,6 +1816,7 @@ namespace NepTunnel
             cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            cardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
             cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1802,25 +1827,32 @@ namespace NepTunnel
             var uidTb = new TextBox { Text = cfg.Uid, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
             Grid.SetRow(uidTb, 0); Grid.SetColumn(uidTb, 1); cardGrid.Children.Add(uidTb);
 
+            // My Username / Nickname (Optional)
+            var userLbl = new TextBlock { Text = LocalizationService.Get("lbl_username"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetRow(userLbl, 1); Grid.SetColumn(userLbl, 0); cardGrid.Children.Add(userLbl);
+            var userTb = new TextBox { Text = cfg.Username, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
+            Grid.SetRow(userTb, 1); Grid.SetColumn(userTb, 1); cardGrid.Children.Add(userTb);
+
             // Server Local Port
             var portLbl = new TextBlock { Text = LocalizationService.Get("lbl_server_port"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetRow(portLbl, 1); Grid.SetColumn(portLbl, 0); cardGrid.Children.Add(portLbl);
+            Grid.SetRow(portLbl, 2); Grid.SetColumn(portLbl, 0); cardGrid.Children.Add(portLbl);
             var portTb = new TextBox { Text = cfg.Port, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
-            Grid.SetRow(portTb, 1); Grid.SetColumn(portTb, 1); cardGrid.Children.Add(portTb);
+            Grid.SetRow(portTb, 2); Grid.SetColumn(portTb, 1); cardGrid.Children.Add(portTb);
 
             // Tunnel Address
             var addrLbl = new TextBlock { Text = LocalizationService.Get("lbl_tunnel_addr"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetRow(addrLbl, 2); Grid.SetColumn(addrLbl, 0); cardGrid.Children.Add(addrLbl);
-            var addrTb = new TextBox { Text = cfg.Addr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
-            Grid.SetRow(addrTb, 2); Grid.SetColumn(addrTb, 1); cardGrid.Children.Add(addrTb);
+            Grid.SetRow(addrLbl, 3); Grid.SetColumn(addrLbl, 0); cardGrid.Children.Add(addrLbl);
+            var addrTb = new TextBox { Text = cfg.HostAddr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 0, 3) };
+            Grid.SetRow(addrTb, 3); Grid.SetColumn(addrTb, 1); cardGrid.Children.Add(addrTb);
 
             // Map File (Optional)
             var mapLbl = new TextBlock { Text = LocalizationService.Get("lbl_map_file"), FontSize = 14, Foreground = (SolidColorBrush)FindResource("MuteBrush"), VerticalAlignment = VerticalAlignment.Center };
-            Grid.SetRow(mapLbl, 3); Grid.SetColumn(mapLbl, 0); cardGrid.Children.Add(mapLbl);
+            Grid.SetRow(mapLbl, 4); Grid.SetColumn(mapLbl, 0); cardGrid.Children.Add(mapLbl);
 
             var mapStack = new Grid();
             mapStack.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             mapStack.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             var mapTb = new TextBox { Text = cfg.Map, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 3, 6, 3) };
             Grid.SetColumn(mapTb, 0); mapStack.Children.Add(mapTb);
 
@@ -1844,7 +1876,7 @@ namespace NepTunnel
                 }
             };
             Grid.SetColumn(mapBrowseBtn, 1); mapStack.Children.Add(mapBrowseBtn);
-            Grid.SetRow(mapStack, 3); Grid.SetColumn(mapStack, 1); cardGrid.Children.Add(mapStack);
+            Grid.SetRow(mapStack, 4); Grid.SetColumn(mapStack, 1); cardGrid.Children.Add(mapStack);
 
             card.Child = cardGrid;
             stack.Children.Add(card);
@@ -1878,6 +1910,30 @@ namespace NepTunnel
             tutBtn.Click += (s, e) => ShowTutorialView();
             btnRow.Children.Add(tutBtn);
 
+            // Import / Update Scripts Action Button
+            var importScriptsBtn = new Button
+            {
+                Content = IconFactory.CreateButtonContent("file-code", "Importar / Actualizar Scripts", 14),
+                Background = (SolidColorBrush)FindResource("Card2Brush"),
+                Style = (Style)FindResource("NepButtonStyle"),
+                Margin = new Thickness(6, 0, 6, 0)
+            };
+            importScriptsBtn.Click += (s, e) =>
+            {
+                try
+                {
+                    RbxmBridgeServer.ForceScriptImport = true;
+                    RbxmBridgeServer.ScriptsImported = true;
+                    bool ok = PluginInstaller.EnsurePluginInstalled(out string msg);
+                    ShowSuccessAlert("✓ Importación de Scripts", "✓ Scripts importados/actualizados correctamente en Roblox Studio.\n\nLos nuevos scripts oficiales del tabulador han sido insertados.");
+                }
+                catch (Exception ex)
+                {
+                    ShowSuccessAlert("✗ Error de Importación", $"No se pudieron importar los scripts: {ex.Message}");
+                }
+            };
+            btnRow.Children.Add(importScriptsBtn);
+
             var launchBtn = new Button
             {
                 Content = IconFactory.CreateButtonContent("play", LocalizationService.Get("btn_launch_server"), 16),
@@ -1891,6 +1947,7 @@ namespace NepTunnel
                 string port = portTb.Text.Trim();
                 string addr = addrTb.Text.Trim();
                 string mapPath = mapTb.Text.Trim();
+                string username = userTb.Text.Trim();
 
                 if (string.IsNullOrEmpty(uid) || string.IsNullOrEmpty(port) || string.IsNullOrEmpty(addr))
                 {
@@ -1902,7 +1959,15 @@ namespace NepTunnel
                     MessageBox.Show("Port must be a number.", "Invalid Port", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                if (string.IsNullOrEmpty(_studioPath))
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
+                {
+                    _studioPath = RobloxStudioService.GetStudioPath();
+                    var cfgToSave = ConfigManager.LoadConfig();
+                    cfgToSave.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfgToSave);
+                }
+
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
                 {
                     string osName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" :
                                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "macOS" : "Linux";
@@ -1911,11 +1976,16 @@ namespace NepTunnel
                 }
 
                 cfg.Uid = uid;
+                cfg.Username = username;
                 cfg.Port = port;
+                cfg.HostAddr = addr;
                 cfg.Addr = addr;
                 cfg.Map = mapPath;
                 cfg.Studio = _studioPath;
                 ConfigManager.SaveConfig(cfg);
+
+                RbxmBridgeServer.ActiveUsername = username;
+                RbxmBridgeServer.ActiveUid = uid;
 
                 ShowHostRunningView(uid, port, addr, mapPath);
             };
@@ -1962,27 +2032,27 @@ namespace NepTunnel
                 Margin = new Thickness(0, 10, 0, 0)
             };
 
-            var joinLocalBtn = new Button
+            // VM MODE: No client launch button — server only to save resources
+            var optimizeBtn = new Button
             {
-                Content = IconFactory.CreateButtonContent("join", LocalizationService.Get("btn_join_locally"), 16),
-                Background = (SolidColorBrush)FindResource("WarnBrush"),
+                Content = IconFactory.CreateButtonContent("test", "Optimizar Gráficos VM", 14),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#059669")),
                 Style = (Style)FindResource("NepButtonStyle"),
-                IsEnabled = false,
                 Margin = new Thickness(6, 0, 6, 0)
             };
-            joinLocalBtn.Click += (s, e) =>
+            optimizeBtn.Click += (s, e) =>
             {
                 try
                 {
-                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", port, pg, tg, "StudioPlayer_Host");
-                    LogAppend(logBox.RichText, "Local client launched.", "info");
+                    VmOptimizer.ApplyMinGraphics();
+                    LogAppend(logBox.RichText, "✓ Gráficos de Roblox Studio bajados al mínimo.", "ok");
                 }
                 catch (Exception ex)
                 {
-                    LogAppend(logBox.RichText, $"Launch error: {ex.Message}", "err");
+                    LogAppend(logBox.RichText, $"No se pudo optimizar: {ex.Message}", "err");
                 }
             };
-            ctrlsRow.Children.Add(joinLocalBtn);
+            ctrlsRow.Children.Add(optimizeBtn);
 
             var stopBtn = new Button
             {
@@ -2024,6 +2094,9 @@ namespace NepTunnel
 
             Task.Run(async () =>
             {
+                Logger.Log($"Host Session Started: UID={uid}, Port={port}, Addr={addr}, Map={mapPath}");
+                Logger.FetchLatestRobloxStudioLog();
+
                 Dispatcher.Invoke(() =>
                 {
                     LogAppend(logBox.RichText, $"Parent GUID: {pg}", "dim");
@@ -2034,20 +2107,29 @@ namespace NepTunnel
 
                 if (!string.IsNullOrEmpty(mapPath) && File.Exists(mapPath))
                 {
-                    Dispatcher.Invoke(() => LogAppend(logBox.RichText, $"Injecting map: {Path.GetFileName(mapPath)}", "warn"));
+                    Dispatcher.Invoke(() => LogAppend(logBox.RichText, $"Injecting selected map: {Path.GetFileName(mapPath)}", "warn"));
                     if (MapInjector.InjectMap(mapPath))
                     {
                         Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✓ Map copied to Roblox runtime cache", "ok"));
                     }
                     else
                     {
-                        Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✗ Failed to inject map. Studio might load default cache.", "err"));
+                        Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✗ Failed to inject map. Studio will load default cache.", "err"));
+                    }
+                }
+                else
+                {
+                    Dispatcher.Invoke(() => LogAppend(logBox.RichText, "No map selected. Injecting default Roblox Baseplate map…", "warn"));
+                    if (MapInjector.InjectMap(""))
+                    {
+                        Dispatcher.Invoke(() => LogAppend(logBox.RichText, "✓ Default Baseplate map loaded into Roblox runtime cache", "ok"));
                     }
                 }
 
                 Dispatcher.Invoke(() => LogAppend(logBox.RichText, "Launching Studio server process…"));
                 try
                 {
+                    UdpProxy.StopProxy(wait: false);
                     RobloxStudioService.LaunchServer(_studioPath, port, uid, pg, tg);
                     Dispatcher.Invoke(() => LogAppend(logBox.RichText, "Server started! Waiting 5 s for Studio init…", "ok"));
                     ConfigManager.WriteSessionLog(pg, tg, addr, port, uid);
@@ -2057,7 +2139,6 @@ namespace NepTunnel
                         LogAppend(logBox.RichText, "● SERVER IS LIVE", "ok");
                         LogAppend(logBox.RichText, $"Session info saved → {ConfigManager.LogFile}", "dim");
                         Clipboard.SetText(addr);
-                        joinLocalBtn.IsEnabled = true;
                         SetStatus(LocalizationService.Get("status_live"), (SolidColorBrush)FindResource("OkBrush"));
                     });
                 }
@@ -2109,6 +2190,19 @@ namespace NepTunnel
             var cfg = ConfigManager.LoadConfig();
 
             var cardStack = new StackPanel();
+
+            // My Username / Nick Field (Optional)
+            cardStack.Children.Add(new TextBlock
+            {
+                Text = LocalizationService.Get("lbl_username"),
+                FontSize = 14,
+                Foreground = (SolidColorBrush)FindResource("MuteBrush"),
+                Margin = new Thickness(0, 0, 0, 4)
+            });
+
+            var userTb = new TextBox { Text = cfg.Username, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 0, 0, 8) };
+            cardStack.Children.Add(userTb);
+
             cardStack.Children.Add(new TextBlock
             {
                 Text = LocalizationService.Get("lbl_tunnel_input"),
@@ -2117,7 +2211,7 @@ namespace NepTunnel
                 Margin = new Thickness(0, 0, 0, 4)
             });
 
-            var addrTb = new TextBox { Text = cfg.Addr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 0, 0, 6) };
+            var addrTb = new TextBox { Text = !string.IsNullOrEmpty(cfg.JoinAddr) ? cfg.JoinAddr : cfg.HostAddr, Style = (Style)FindResource("NepTextBoxStyle"), Margin = new Thickness(0, 0, 0, 6) };
             cardStack.Children.Add(addrTb);
 
             cardStack.Children.Add(new TextBlock
@@ -2166,6 +2260,7 @@ namespace NepTunnel
             };
             connectBtn.Click += (s, e) =>
             {
+                string username = userTb.Text.Trim();
                 string addr = addrTb.Text.Trim();
                 if (string.IsNullOrEmpty(addr) || !addr.Contains(':'))
                 {
@@ -2178,15 +2273,26 @@ namespace NepTunnel
                     errLbl.Text = "Port must be a number";
                     return;
                 }
-                if (string.IsNullOrEmpty(_studioPath))
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
                 {
-                    MessageBox.Show("Roblox Studio was not found.", "Studio Not Found", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _studioPath = RobloxStudioService.GetStudioPath();
+                    var cfgToSave = ConfigManager.LoadConfig();
+                    cfgToSave.Studio = _studioPath;
+                    ConfigManager.SaveConfig(cfgToSave);
+                }
+
+                if (string.IsNullOrEmpty(_studioPath) || !File.Exists(_studioPath))
+                {
+                    MessageBox.Show("Roblox Studio was not found on your system.", "Studio Not Found", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
                 errLbl.Text = "";
 
-                cfg.Addr = addr;
+                cfg.Username = username;
+                cfg.JoinAddr = addr;
                 ConfigManager.SaveConfig(cfg);
+
+                RbxmBridgeServer.ActiveUsername = username;
 
                 ShowJoinRunningView(parts[0], rp);
             };
@@ -2277,58 +2383,45 @@ namespace NepTunnel
 
             Task.Run(async () =>
             {
+                Logger.Log($"Join Session Started: Target={dstHost}:{dstPort}");
+                Logger.FetchLatestRobloxStudioLog();
+
                 string pg = Guid.NewGuid().ToString().ToUpper();
                 string tg = Guid.NewGuid().ToString().ToUpper();
 
                 Dispatcher.Invoke(() =>
                 {
-                    LogAppend(logBox.RichText, $"Target     : {dstHost}:{dstPort}", "info");
-                    LogAppend(logBox.RichText, $"Local proxy: 127.0.0.1:{UdpProxy.PROXY_PORT}");
-                    LogAppend(logBox.RichText, "Starting UDP proxy…");
+                    LogAppend(logBox.RichText, "Starting UDP Proxy...", "dim");
                 });
 
-                bool ok = UdpProxy.StartProxy(dstHost, dstPort);
-                if (!ok)
+                bool proxyStarted = UdpProxy.StartProxy(dstHost, dstPort);
+                if (!proxyStarted)
                 {
                     Dispatcher.Invoke(() =>
                     {
-                        LogAppend(logBox.RichText, $"Failed to bind port {UdpProxy.PROXY_PORT}. Is another session running?", "err");
-                        SetStatus($"Proxy failed — port {UdpProxy.PROXY_PORT} busy?", (SolidColorBrush)FindResource("ErrBrush"));
+                        LogAppend(logBox.RichText, "✗ Proxy failed to start (DNS timeout?).", "err");
+                        SetStatus("Connection Failed", (SolidColorBrush)FindResource("ErrBrush"));
                     });
                     return;
                 }
 
-                Dispatcher.Invoke(() =>
-                {
-                    LogAppend(logBox.RichText, $"Proxy active on 127.0.0.1:{UdpProxy.PROXY_PORT}", "ok");
-                    LogAppend(logBox.RichText, $"Warming tunnel ({UdpProxy.WARM_PACKETS} probes)…", "warn");
-                });
-
+                // Enviar unos paquetes de calentamiento para perforar el NAT (opcional pero ayuda)
                 int warmed = UdpProxy.WarmTunnel(dstHost, dstPort);
-                Dispatcher.Invoke(() =>
-                {
-                    if (warmed > 0)
-                    {
-                        LogAppend(logBox.RichText, $"✓ Tunnel warmed ({warmed}/{UdpProxy.WARM_PACKETS} sent)", "ok");
-                    }
-                    else
-                    {
-                        LogAppend(logBox.RichText, "Warm-up skipped (proxy stopped early)", "dim");
-                    }
-                });
-
+                
                 await Task.Delay(250);
 
                 Dispatcher.Invoke(() =>
                 {
                     LogAppend(logBox.RichText, $"Parent GUID: {pg}", "dim");
                     LogAppend(logBox.RichText, $"Play  GUID : {tg}", "dim");
-                    LogAppend(logBox.RichText, "Launching Studio client…");
+                    LogAppend(logBox.RichText, "Launching Studio client via Local Proxy…");
                 });
 
                 try
                 {
-                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", UdpProxy.PROXY_PORT.ToString(), pg, tg, "StudioPlayer_Proxy");
+                    var cfg = ConfigManager.LoadConfig();
+                    string clientNick = !string.IsNullOrWhiteSpace(cfg.Username) ? cfg.Username : cfg.Uid;
+                    RobloxStudioService.LaunchClient(_studioPath, "127.0.0.1", UdpProxy.PROXY_PORT.ToString(), pg, tg, cfg.Uid, "StudioPlayer_Proxy");
                     Dispatcher.Invoke(() =>
                     {
                         LogAppend(logBox.RichText, "● CONNECTED — Studio launched", "ok");
@@ -2340,7 +2433,6 @@ namespace NepTunnel
                     Dispatcher.Invoke(() =>
                     {
                         LogAppend(logBox.RichText, $"Studio launch error: {ex.Message}", "err");
-                        UdpProxy.StopProxy();
                         SetStatus("Studio launch failed", (SolidColorBrush)FindResource("ErrBrush"));
                     });
                 }
